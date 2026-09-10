@@ -1,17 +1,12 @@
-import { GameState, RaceState } from '../core/GameState';
 import { VehiclePhysics, VehicleTelemetry } from '../physics/VehiclePhysics';
 import { SurfaceType } from '../physics/SurfaceSystem';
+import { RaceManager } from '../game/race/RaceManager';
+import { RaceState } from '../game/race/RaceState';
+import { RaceTimer } from '../game/race/RaceTimer';
 
 export class HUD {
-  // DOM Elements
+  // DOM Elements - Gauges
   private speedEl: HTMLElement | null;
-  private lapEl: HTMLElement | null;
-  private lapStatusEl: HTMLElement | null;
-  private currentTimeEl: HTMLElement | null;
-  private bestTimeEl: HTMLElement | null;
-  private announcementEl: HTMLElement | null;
-
-  // Phase 2 Elements
   private gearEl: HTMLElement | null;
   private rpmBarEl: HTMLElement | null;
   private rpmTextEl: HTMLElement | null;
@@ -19,33 +14,63 @@ export class HUD {
   private driftIndicatorEl: HTMLElement | null;
   private driftDegEl: HTMLElement | null;
 
-  // Cache values to prevent unnecessary DOM writes
+  // DOM Elements - Race & Position
+  private positionEl: HTMLElement | null;
+  private posStatusEl: HTMLElement | null;
+  private lapEl: HTMLElement | null;
+  private lapStatusEl: HTMLElement | null;
+  private currentTimeEl: HTMLElement | null;
+  private bestTimeEl: HTMLElement | null;
+  private announcementEl: HTMLElement | null;
+
+  // DOM Elements - Results Modal
+  private resultsOverlayEl: HTMLElement | null;
+  private resultsHeadlineEl: HTMLElement | null;
+  private resultsTbodyEl: HTMLElement | null;
+  private restartBtnEl: HTMLElement | null;
+
+  // Cache values to avoid layout thrashing
   private prevSpeed: number = -1;
-  private prevLapText: string = '';
-  private prevLapStatusText: string = '';
-  private prevCurrentTimeText: string = '';
-  private prevBestTimeText: string = '';
-  private prevAnnouncementText: string = '';
   private prevGear: string = '';
   private prevRpmBarWidth: string = '';
   private prevSurface: SurfaceType | '' = '';
   private prevDrifting: boolean = false;
   private prevDriftDeg: number = -1;
 
+  private prevPosText: string = '';
+  private prevPosStatusText: string = '';
+  private prevLapText: string = '';
+  private prevLapStatusText: string = '';
+  private prevCurrentTimeText: string = '';
+  private prevBestTimeText: string = '';
+  private prevAnnouncementText: string = '';
+  private resultsDisplayed: boolean = false;
+
+  // Throttling timer for 12.5 Hz DOM updates on text telemetry
+  private textUpdateTimer: number = 0;
+  private readonly textUpdateInterval: number = 0.08;
+
   constructor() {
     this.speedEl = document.getElementById('hud-speed');
-    this.lapEl = document.getElementById('hud-lap');
-    this.lapStatusEl = document.getElementById('hud-lap-status');
-    this.currentTimeEl = document.getElementById('hud-current-time');
-    this.bestTimeEl = document.getElementById('hud-best-time');
-    this.announcementEl = document.getElementById('announcement-text');
-
     this.gearEl = document.getElementById('hud-gear');
     this.rpmBarEl = document.getElementById('hud-rpm-bar');
     this.rpmTextEl = document.getElementById('hud-rpm-text');
     this.surfaceEl = document.getElementById('hud-surface');
     this.driftIndicatorEl = document.getElementById('drift-indicator');
     this.driftDegEl = document.getElementById('hud-drift-deg');
+
+    this.positionEl = document.getElementById('hud-position');
+    this.posStatusEl = document.getElementById('hud-pos-status');
+    this.lapEl = document.getElementById('hud-lap');
+    this.lapStatusEl = document.getElementById('hud-lap-status');
+    this.currentTimeEl = document.getElementById('hud-current-time');
+    this.bestTimeEl = document.getElementById('hud-best-time');
+    this.announcementEl = document.getElementById('announcement-text');
+
+    this.resultsOverlayEl = document.getElementById('race-results-overlay');
+    this.resultsHeadlineEl = document.getElementById('results-headline');
+    this.resultsTbodyEl = document.getElementById('results-tbody');
+    this.restartBtnEl = document.getElementById('btn-restart-race');
   }
 
   public onSettingsButtonClick(callback: () => void): void {
@@ -58,13 +83,32 @@ export class HUD {
     }
   }
 
+  public onRestartButtonClick(callback: () => void): void {
+    if (this.restartBtnEl) {
+      this.restartBtnEl.addEventListener('click', (e) => {
+        e.stopPropagation();
+        this.hideResults();
+        callback();
+      });
+    }
+  }
+
+  public hideResults(): void {
+    if (this.resultsOverlayEl) {
+      this.resultsOverlayEl.style.display = 'none';
+    }
+    this.resultsDisplayed = false;
+  }
+
   /**
    * Updates HUD telemetry without forcing DOM layout reflows.
+   * High-frequency gauges (speed, rpm, drift) update per frame.
+   * Lower-frequency text (position, lap, times) throttled to ~12.5 Hz.
    */
-  public update(gameState: GameState, vehiclePhysics: VehiclePhysics): void {
+  public update(dt: number, raceManager: RaceManager, vehiclePhysics: VehiclePhysics, totalCheckpoints: number): void {
     const telem: VehicleTelemetry = vehiclePhysics.telemetry;
 
-    // 1. Digital Speedometer
+    // 1. Digital Speedometer (Per Frame)
     const speed = telem.speedKmH;
     if (speed !== this.prevSpeed && this.speedEl) {
       this.speedEl.textContent = speed.toString().padStart(3, '0');
@@ -117,40 +161,8 @@ export class HUD {
       }
     }
 
-    // 6. Lap Display
-    const lapText = `${gameState.currentLap} / ${gameState.totalLaps}`;
-    if (lapText !== this.prevLapText && this.lapEl) {
-      this.lapEl.textContent = lapText;
-      this.prevLapText = lapText;
-    }
-
-    // Checkpoint Sub-status
-    const statusText = `CHECKPOINT ${gameState.currentCheckpoint} / ${gameState.totalCheckpoints}`;
-    if (statusText !== this.prevLapStatusText && this.lapStatusEl) {
-      this.lapStatusEl.textContent = statusText;
-      this.prevLapStatusText = statusText;
-    }
-
-    // 7. Race Timers
-    let currentFormatted = gameState.formatTime(gameState.currentLapTime);
-    if (gameState.state === RaceState.COUNTDOWN) {
-      currentFormatted = '00:00.000';
-    }
-    if (currentFormatted !== this.prevCurrentTimeText && this.currentTimeEl) {
-      this.currentTimeEl.textContent = currentFormatted;
-      this.prevCurrentTimeText = currentFormatted;
-    }
-
-    const bestFormatted = gameState.bestLapTime > 0
-      ? `BEST: ${gameState.formatTime(gameState.bestLapTime)}`
-      : 'BEST: --:--.---';
-    if (bestFormatted !== this.prevBestTimeText && this.bestTimeEl) {
-      this.bestTimeEl.textContent = bestFormatted;
-      this.prevBestTimeText = bestFormatted;
-    }
-
-    // 8. Announcement Overlay (3... 2... 1... GO! / FINISH)
-    const announcementText = gameState.countdownText;
+    // 6. Announcement Overlay (3... 2... 1... GO! / FINISH)
+    const announcementText = raceManager.countdownText;
     if (announcementText !== this.prevAnnouncementText && this.announcementEl) {
       this.announcementEl.textContent = announcementText;
       this.prevAnnouncementText = announcementText;
@@ -165,5 +177,128 @@ export class HUD {
         this.announcementEl.style.display = 'none';
       }
     }
+
+    // 7. Throttled Text Updates (Positions, Lap, Timers, Gap) ~12.5 Hz
+    this.textUpdateTimer += dt;
+    if (this.textUpdateTimer >= this.textUpdateInterval) {
+      this.textUpdateTimer = 0;
+      this.updateThrottledText(raceManager, totalCheckpoints);
+    }
+
+    // 8. Results Modal Check
+    if (raceManager.state === RaceState.RESULTS && !this.resultsDisplayed) {
+      this.showResults(raceManager);
+    }
+  }
+
+  private updateThrottledText(raceManager: RaceManager, totalCheckpoints: number): void {
+    const totalParticipants = raceManager.positionManager.standings.length || 1;
+    const playerStanding = raceManager.positionManager.getParticipant('player');
+    const playerPos = playerStanding ? playerStanding.position : 1;
+
+    // Position Display
+    const posText = `P${playerPos} <span style="font-size: 16px; color: #8b949e;">/ ${totalParticipants}</span>`;
+    if (posText !== this.prevPosText && this.positionEl) {
+      this.positionEl.innerHTML = posText;
+      this.prevPosText = posText;
+    }
+
+    // Position Status (LEADER or Gap)
+    let statusText = 'LEADER';
+    if (playerPos > 1) {
+      const leader = raceManager.positionManager.standings[0];
+      if (leader && playerStanding) {
+        const distDiff = Math.max(0, leader.totalProgress - playerStanding.totalProgress);
+        statusText = `-${distDiff.toFixed(0)}m`;
+      }
+    }
+    if (statusText !== this.prevPosStatusText && this.posStatusEl) {
+      this.posStatusEl.textContent = statusText;
+      this.prevPosStatusText = statusText;
+    }
+
+    // Lap Display
+    const lapNum = Math.min(raceManager.config.laps, raceManager.playerLapManager.currentLap);
+    const lapText = `${lapNum} / ${raceManager.config.laps}`;
+    if (lapText !== this.prevLapText && this.lapEl) {
+      this.lapEl.textContent = lapText;
+      this.prevLapText = lapText;
+    }
+
+    // Checkpoint Status
+    const cpText = `CHECKPOINT ${raceManager.playerCheckpointManager.currentCheckpoint} / ${totalCheckpoints}`;
+    if (cpText !== this.prevLapStatusText && this.lapStatusEl) {
+      this.lapStatusEl.textContent = cpText;
+      this.prevLapStatusText = cpText;
+    }
+
+    // Current Lap / Race Time
+    let currentFormatted = RaceTimer.formatTime(raceManager.timer.currentLapTime);
+    if (raceManager.state === RaceState.COUNTDOWN || raceManager.state === RaceState.GRID) {
+      currentFormatted = '00:00.000';
+    }
+    if (currentFormatted !== this.prevCurrentTimeText && this.currentTimeEl) {
+      this.currentTimeEl.textContent = currentFormatted;
+      this.prevCurrentTimeText = currentFormatted;
+    }
+
+    // Best Lap
+    const bestTime = raceManager.playerLapManager.bestLapTime;
+    const bestFormatted = bestTime > 0
+      ? `BEST: ${RaceTimer.formatTime(bestTime)}`
+      : 'BEST: --:--.---';
+    if (bestFormatted !== this.prevBestTimeText && this.bestTimeEl) {
+      this.bestTimeEl.textContent = bestFormatted;
+      this.prevBestTimeText = bestFormatted;
+    }
+  }
+
+  private showResults(raceManager: RaceManager): void {
+    this.resultsDisplayed = true;
+    if (!this.resultsOverlayEl || !this.resultsTbodyEl) return;
+
+    const results = raceManager.finishSystem.getResults(raceManager.positionManager);
+    const playerResult = results.results.find(r => r.isPlayer);
+    const playerPos = playerResult ? playerResult.position : 1;
+
+    // Headline
+    if (this.resultsHeadlineEl) {
+      if (playerPos === 1) {
+        this.resultsHeadlineEl.textContent = '🏆 VICTORY! — 1ST PLACE';
+        this.resultsHeadlineEl.style.color = '#7ee787';
+      } else if (playerPos === 2) {
+        this.resultsHeadlineEl.textContent = '🥈 2ND PLACE PODIUM';
+        this.resultsHeadlineEl.style.color = '#58a6ff';
+      } else if (playerPos === 3) {
+        this.resultsHeadlineEl.textContent = '🥉 3RD PLACE PODIUM';
+        this.resultsHeadlineEl.style.color = '#f0883e';
+      } else {
+        this.resultsHeadlineEl.textContent = `FINISHED — POSITION P${playerPos}`;
+        this.resultsHeadlineEl.style.color = '#c9d1d9';
+      }
+    }
+
+    // Standings Table Rows
+    let rowsHtml = '';
+    for (const res of results.results) {
+      const isPlayer = res.isPlayer;
+      const rowStyle = isPlayer
+        ? 'background: rgba(31, 111, 235, 0.25); font-weight: bold; color: #58a6ff;'
+        : 'color: #c9d1d9;';
+      const posBadge = res.position === 1 ? '🥇' : res.position === 2 ? '🥈' : res.position === 3 ? '🥉' : `P${res.position}`;
+
+      rowsHtml += `
+        <tr style="border-bottom: 1px solid rgba(255,255,255,0.06); ${rowStyle}">
+          <td style="padding: 10px 8px;">${posBadge}</td>
+          <td style="padding: 10px 8px;">${res.name} ${isPlayer ? '<span style="font-size: 10px; background: #1f6feb; color: #fff; padding: 1px 5px; border-radius: 3px; margin-left: 4px;">YOU</span>' : ''}</td>
+          <td style="padding: 10px 8px; text-align: right;">${res.formattedBestLap}</td>
+          <td style="padding: 10px 8px; text-align: right;">${res.formattedTotalTime}</td>
+          <td style="padding: 10px 8px; text-align: right;">${res.gap}</td>
+        </tr>
+      `;
+    }
+
+    this.resultsTbodyEl.innerHTML = rowsHtml;
+    this.resultsOverlayEl.style.display = 'flex';
   }
 }

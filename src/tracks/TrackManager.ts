@@ -18,18 +18,18 @@ export const ALPINE_CIRCUIT_CONFIG: TrackDefinition = {
     points: [
       { position: [0, 0, 0], width: 14.0, banking: 0 },             // Start/Finish straight
       { position: [140, 4, 0], width: 14.0, banking: 0 },           // High speed flat straight
-      { position: [240, 16, -40], width: 13.0, banking: 0.08 },     // Uphill Turn 1 entry
-      { position: [290, 28, -140], width: 13.0, banking: 0.14 },    // Sweeping mountain carousel
-      { position: [220, 38, -240], width: 13.0, banking: 0.06 },    // High-altitude ridge
+      { position: [240, 16, -40], width: 13.0, banking: 0.035 },    // Uphill Turn 1 entry
+      { position: [290, 28, -140], width: 13.0, banking: 0.055 },   // Sweeping mountain carousel
+      { position: [220, 38, -240], width: 13.0, banking: 0.025 },   // High-altitude ridge
       { position: [110, 42, -220], width: 12.0, banking: 0 },       // Alpine Summit Crest
-      { position: [30, 32, -280], width: 12.0, banking: -0.08 },    // Steep downhill plunge
-      { position: [-40, 22, -240], width: 12.0, banking: 0.05 },    // Downhill chicane apex
-      { position: [-140, 15, -290], width: 13.0, banking: 0.12 },   // Banked hairpin entry
-      { position: [-230, 10, -210], width: 13.0, banking: 0.21 },   // 12° Banked Hairpin Apex
-      { position: [-200, 6, -100], width: 13.0, banking: 0.09 },    // Hairpin exit
+      { position: [30, 32, -280], width: 12.0, banking: -0.035 },   // Steep downhill plunge
+      { position: [-40, 22, -240], width: 12.0, banking: 0.025 },   // Downhill chicane apex
+      { position: [-140, 15, -290], width: 13.0, banking: 0.045 },  // Banked hairpin entry
+      { position: [-230, 10, -210], width: 13.0, banking: 0.065 },  // Banked Hairpin Apex (~3.7° camber)
+      { position: [-200, 6, -100], width: 13.0, banking: 0.035 },   // Hairpin exit
       { position: [-110, 2, -40], width: 13.0, banking: 0 },        // Lower valley S-curve
-      { position: [-130, 1, 60], width: 13.0, banking: 0.06 },      // Valley corner
-      { position: [-80, 0, 120], width: 14.0, banking: 0.10 },      // Final sweeping turn
+      { position: [-130, 1, 60], width: 13.0, banking: 0.025 },     // Valley corner
+      { position: [-80, 0, 120], width: 14.0, banking: 0.040 },     // Final sweeping turn
       { position: [-20, 0, 40], width: 14.0, banking: 0 }           // Exit onto main straight
     ],
     closed: true,
@@ -43,31 +43,31 @@ export const ALPINE_CIRCUIT_CONFIG: TrackDefinition = {
     resolution: 130,
     seed: 12345,
     baseHeight: -4.0,
-    heightScale: 55.0,
-    corridorWidth: 32.0,
+    heightScale: 32.0,
+    corridorWidth: 38.0,
     corridorBlend: 20.0
   },
   boundaries: [
     { type: 'ROAD', lateralDistance: 6.5, hasPhysicalBarrier: true, barrierHeight: 1.2, barrierWidth: 0.8 },
-    { type: 'PLAYABLE', lateralDistance: 25.0 },
-    { type: 'RESET', lateralDistance: 60.0 }
+    { type: 'PLAYABLE', lateralDistance: 24.0 },
+    { type: 'RESET', lateralDistance: 55.0 }
   ],
   startGrid: {
     positions: 8,
-    rowSpacing: 9.0,
-    lateralSpacing: 3.4,
+    rowSpacing: 10.0,
+    lateralSpacing: 3.5,
     offsetFromStart: 6.0
   }
 };
 
 /**
- * 2. Coastal Speedway (Fast Flowing Circuit)
- * Wide road (16m), high-speed sweeping corners, moderate rolling hills.
+ * 2. Coastal Cruiser (High speed, wide road, gentle banking)
+ * Sweeping ocean highway with long straights and smooth transitions.
  */
 export const COASTAL_SPEEDWAY_CONFIG: TrackDefinition = {
   id: 'coastal-speedway',
   name: 'Coastal Speedway',
-  description: 'Wide, fast-flowing coastal circuit with sweeping high-speed bends and gentle rolling elevation.',
+  description: 'Fast and scenic coastal track with sweeping high-speed corners, ocean vistas, and wide overtaking zones.',
   roadWidth: 16.0,
   laps: 3,
   seed: 67890,
@@ -76,14 +76,14 @@ export const COASTAL_SPEEDWAY_CONFIG: TrackDefinition = {
     points: [
       { position: [0, 0, 0], width: 16.0, banking: 0 },
       { position: [180, 2, 0], width: 16.0, banking: 0 },
-      { position: [300, 8, -60], width: 16.0, banking: 0.07 },
-      { position: [360, 14, -180], width: 16.0, banking: 0.12 },
-      { position: [280, 16, -300], width: 16.0, banking: 0.08 },
-      { position: [140, 12, -260], width: 16.0, banking: 0.04 },
-      { position: [-20, 6, -300], width: 16.0, banking: -0.06 },
-      { position: [-160, 4, -200], width: 16.0, banking: 0.08 },
-      { position: [-220, 8, -80], width: 16.0, banking: 0.10 },
-      { position: [-140, 4, 80], width: 16.0, banking: 0.06 },
+      { position: [300, 8, -60], width: 16.0, banking: 0.03 },
+      { position: [360, 14, -180], width: 16.0, banking: 0.05 },
+      { position: [280, 16, -300], width: 16.0, banking: 0.035 },
+      { position: [140, 12, -260], width: 16.0, banking: 0.02 },
+      { position: [-20, 6, -300], width: 16.0, banking: -0.025 },
+      { position: [-160, 4, -200], width: 16.0, banking: 0.035 },
+      { position: [-220, 8, -80], width: 16.0, banking: 0.04 },
+      { position: [-140, 4, 80], width: 16.0, banking: 0.025 },
       { position: [-40, 1, 60], width: 16.0, banking: 0 }
     ],
     closed: true,
@@ -108,9 +108,9 @@ export const COASTAL_SPEEDWAY_CONFIG: TrackDefinition = {
   ],
   startGrid: {
     positions: 8,
-    rowSpacing: 9.5,
+    rowSpacing: 12.0,
     lateralSpacing: 4.0,
-    offsetFromStart: 6.0
+    offsetFromStart: 8.0
   }
 };
 
@@ -130,17 +130,17 @@ export const GP_TECHNICAL_CONFIG: TrackDefinition = {
     points: [
       { position: [0, 0, 0], width: 14.0, banking: 0 },
       { position: [100, 2, 0], width: 13.0, banking: 0 },
-      { position: [180, 8, -30], width: 12.5, banking: 0.05 },
-      { position: [210, 14, -90], width: 12.0, banking: 0.10 },
-      { position: [170, 12, -150], width: 12.0, banking: -0.08 },
-      { position: [200, 18, -210], width: 12.0, banking: 0.10 },
-      { position: [120, 22, -260], width: 12.5, banking: 0.04 },
-      { position: [40, 16, -220], width: 12.0, banking: -0.06 },
-      { position: [-20, 10, -260], width: 12.0, banking: 0.08 },
-      { position: [-100, 8, -220], width: 12.5, banking: 0.04 },
-      { position: [-170, 4, -140], width: 12.0, banking: 0.15 },
-      { position: [-130, 2, -60], width: 12.0, banking: -0.10 },
-      { position: [-90, 0, 20], width: 13.0, banking: 0.05 },
+      { position: [180, 8, -30], width: 12.5, banking: 0.025 },
+      { position: [210, 14, -90], width: 12.0, banking: 0.045 },
+      { position: [170, 12, -150], width: 12.0, banking: -0.035 },
+      { position: [200, 18, -210], width: 12.0, banking: 0.045 },
+      { position: [120, 22, -260], width: 12.5, banking: 0.02 },
+      { position: [40, 16, -220], width: 12.0, banking: -0.025 },
+      { position: [-20, 10, -260], width: 12.0, banking: 0.035 },
+      { position: [-100, 8, -220], width: 12.5, banking: 0.02 },
+      { position: [-170, 4, -140], width: 12.0, banking: 0.06 },
+      { position: [-130, 2, -60], width: 12.0, banking: -0.04 },
+      { position: [-90, 0, 20], width: 13.0, banking: 0.025 },
       { position: [-30, 0, 30], width: 14.0, banking: 0 }
     ],
     closed: true,
@@ -165,9 +165,9 @@ export const GP_TECHNICAL_CONFIG: TrackDefinition = {
   ],
   startGrid: {
     positions: 8,
-    rowSpacing: 8.5,
-    lateralSpacing: 3.2,
-    offsetFromStart: 6.0
+    rowSpacing: 11.0,
+    lateralSpacing: 3.4,
+    offsetFromStart: 8.0
   }
 };
 

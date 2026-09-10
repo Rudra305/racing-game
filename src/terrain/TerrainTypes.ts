@@ -9,6 +9,9 @@ export interface GroundElevationResult {
   bankAngle: number;
   pitchAngle: number;
   distance: number;
+  closestSampleIndex?: number;
+  lateralDistance?: number;
+  halfRoadWidth?: number;
 }
 
 export interface TerrainChunkBounds {

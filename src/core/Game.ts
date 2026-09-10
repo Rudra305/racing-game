@@ -1,6 +1,5 @@
 import { GAME_CONFIG } from '../config/GameConfig';
 import { Time } from './Time';
-import { GameState, RaceState } from './GameState';
 import { GameLoop } from './GameLoop';
 import { Renderer } from '../rendering/Renderer';
 import { SceneManager } from '../rendering/SceneManager';
@@ -19,11 +18,16 @@ import { SettingsModal } from '../ui/SettingsModal';
 import { AssetManager } from '../assets/AssetManager';
 import { EnvironmentManager } from '../environment/EnvironmentManager';
 import { BiomeType } from '../environment/EnvironmentTypes';
+import { RaceManager } from '../game/race/RaceManager';
+import { RaceState } from '../game/race/RaceState';
+import { AISystem } from '../game/ai/AISystem';
+import { AIDifficultyLevel } from '../game/race/RaceConfig';
 
 export class Game {
   // Systems
   private time!: Time;
-  private gameState!: GameState;
+  private raceManager!: RaceManager;
+  private aiSystem!: AISystem;
   private inputManager!: InputManager;
   private renderer!: Renderer;
   private sceneManager!: SceneManager;
@@ -54,9 +58,8 @@ export class Game {
       throw new Error('Canvas element #game-canvas not found.');
     }
 
-    // 1. Core Timing & State
+    // 1. Core Timing & Inputs
     this.time = new Time();
-    this.gameState = new GameState(GAME_CONFIG.race.totalLaps);
     this.inputManager = new InputManager();
     this.inputManager.init();
 
@@ -89,9 +92,10 @@ export class Game {
     );
     this.sceneManager.add(this.environmentManager.group);
 
-    // 4. Vehicle & Physics Setup
+    // 4. Player Vehicle & Physics Setup (Spawned on Grid Slot 0 / Pole Position)
+    const playerSlot = this.track.startGrid.getPlayerSlot();
     this.vehiclePhysics = new VehiclePhysics();
-    this.vehiclePhysics.setSpawn(this.track.spawnPosition, this.track.spawnHeading);
+    this.vehiclePhysics.setSpawn(playerSlot.position, playerSlot.heading);
 
     this.vehicle = new Vehicle();
     this.vehicle.syncWithPhysics(this.vehiclePhysics);
@@ -107,7 +111,28 @@ export class Game {
     // 6. Camera Initial Alignment
     this.cameraManager.resetToVehicle(this.vehiclePhysics.position, this.vehiclePhysics.heading);
 
-    // 7. UI, Settings & Telemetry
+    // 7. Race System & AI Opponents (Phase 5)
+    this.raceManager = new RaceManager(this.track, {
+      laps: GAME_CONFIG.race.totalLaps,
+      aiCount: 7,
+      countdownDuration: 3.0,
+      difficulty: AIDifficultyLevel.NORMAL,
+      allowRestart: true,
+      rubberBanding: { enabled: false, strength: 0 }
+    });
+
+    this.aiSystem = new AISystem(this.track, 7, AIDifficultyLevel.NORMAL, GAME_CONFIG.race.totalLaps);
+    this.aiSystem.spawnOnGrid(this.track.startGrid);
+    this.aiSystem.registerWithPositionManager(this.raceManager.positionManager);
+
+    // Add AI visual models to scene and physics to physicsWorld
+    for (const opp of this.aiSystem.opponents) {
+      this.sceneManager.add(opp.vehicle.group);
+      this.physicsWorld.addAIVehicle(opp.physics);
+    }
+    this.aiSystem.syncVisuals();
+
+    // 8. UI, Settings & Telemetry
     this.hud = new HUD();
     this.perfMonitor = new PerformanceMonitor();
     this.assetManager = new AssetManager();
@@ -125,6 +150,13 @@ export class Game {
       onQualityChanged: (scale) => {
         this.environmentManager.setLODScale(scale);
       },
+      onAIDifficultyChanged: (difficulty) => {
+        this.raceManager.config.difficulty = difficulty;
+        this.aiSystem.setDifficulty(difficulty);
+      },
+      onAICountChanged: (count) => {
+        this.changeAICount(count);
+      },
       onClosed: () => {
         canvas.focus();
       }
@@ -134,17 +166,21 @@ export class Game {
       this.settingsModal.toggle();
     });
 
-    // 8. Initialize GameState with track checkpoints
-    this.gameState.init(this.track.checkpoints.length);
+    this.hud.onRestartButtonClick(() => {
+      this.restartRace();
+    });
 
-    // 9. Game Loop with Fixed Timestep
+    // 9. Start Race Countdown
+    this.raceManager.reset();
+
+    // 10. Game Loop with Fixed Timestep
     this.gameLoop = new GameLoop(
       this.time,
       this.onFixedUpdate.bind(this),
       this.onRenderUpdate.bind(this)
     );
 
-    // 10. Event Listeners
+    // 11. Event Listeners
     window.addEventListener('resize', this.boundResize);
     canvas.setAttribute('tabindex', '0');
     canvas.focus();
@@ -154,7 +190,7 @@ export class Game {
       }
     });
 
-    // 11. Start Game Loop
+    // 12. Start Game Loop
     this.gameLoop.start();
   }
 
@@ -178,37 +214,71 @@ export class Game {
       this.resetVehicle();
     }
 
-    // 4. Update Controller & Gate Drive Input based on Race State
+    // 4. Update Controller & AI based on Race State
     if (this.settingsModal.visible) {
       // Pause inputs while in settings menu
       this.vehicleController.setEnabled(false);
+      this.aiSystem.setEnabled(false);
       this.physicsWorld.step(dt);
-    } else if (this.gameState.state === RaceState.COUNTDOWN) {
-      // Inputs locked during 3-2-1 countdown
+      return;
+    }
+
+    // Advance Race Countdown & Timers
+    this.raceManager.update(dt);
+
+    if (this.raceManager.state === RaceState.COUNTDOWN || this.raceManager.state === RaceState.GRID) {
+      // Inputs locked during countdown
       this.vehicleController.setEnabled(false);
+      this.aiSystem.setEnabled(false);
       this.physicsWorld.step(dt);
-    } else if (this.gameState.state === RaceState.RACING) {
+    } else if (this.raceManager.state === RaceState.RACING) {
       this.vehicleController.setEnabled(true);
+      this.aiSystem.setEnabled(true);
+
+      // AI Decision Step (~16.6 Hz decision throttled internally, controls fed continuously)
+      this.aiSystem.update(
+        dt,
+        this.vehiclePhysics.position,
+        this.vehiclePhysics.forwardSpeed,
+        this.vehiclePhysics.trackDistance,
+        this.vehiclePhysics.trackLateralDist,
+        this.raceManager.timer.raceTime,
+        this.raceManager.positionManager
+      );
+
+      // Player Control Step
       this.vehicleController.update();
+
+      // Physics Step (Player + AI + Inter-vehicle 2D Collisions at 60 Hz)
       this.physicsWorld.step(dt);
 
-      // Checkpoint Progression Verification
-      this.checkCheckpoints();
-    } else if (this.gameState.state === RaceState.FINISHED) {
-      // Disable power on finish; car coasts smoothly to a halt
+      // Checkpoint & Lap Progression
+      this.raceManager.updatePlayerProgression(this.vehiclePhysics.position, this.vehiclePhysics.trackDistance);
+    } else if (this.raceManager.state === RaceState.FINISHED || this.raceManager.state === RaceState.RESULTS) {
+      // Player coasts smoothly to halt after finish
       this.vehicleController.setEnabled(false);
+
+      // AI continues until finished
+      this.aiSystem.update(
+        dt,
+        this.vehiclePhysics.position,
+        this.vehiclePhysics.forwardSpeed,
+        this.vehiclePhysics.trackDistance,
+        this.vehiclePhysics.trackLateralDist,
+        this.raceManager.timer.raceTime,
+        this.raceManager.positionManager
+      );
+
       this.physicsWorld.step(dt);
     }
   }
 
   private onRenderUpdate(dt: number): void {
-    // 1. Update Game State / Countdown / Lap Timers
-    this.gameState.update(dt);
-
-    // 2. Synchronize Visual Vehicle with Phase 2 Physics State
+    // 1. Synchronize Visual Vehicle Meshes with Physics States
     this.vehicle.syncWithPhysics(this.vehiclePhysics);
+    this.aiSystem.syncVisuals();
 
-    // 3. Update Camera Follow, Acceleration Setback, Curb Shake & Speed-Dependent FOV with terrain safety
+    // 2. Update Camera Follow, Acceleration Setback, Curb Shake & Speed-Dependent FOV
     const groundInfo = this.track.queryGroundElevation(this.cameraManager.camera.position, true);
     this.cameraManager.update(
       dt,
@@ -220,14 +290,14 @@ export class Game {
       groundInfo.height
     );
 
-    // 4. Update Shadow Camera Target
+    // 3. Update Shadow Camera Target
     this.sceneManager.updateLightTarget(this.vehiclePhysics.position);
 
-    // 4b. Update Environment LOD & Distance Culling
+    // 4. Update Environment LOD & Distance Culling
     this.environmentManager.update(this.vehiclePhysics.position);
 
-    // 5. Update HUD Telemetry
-    this.hud.update(this.gameState, this.vehiclePhysics);
+    // 5. Update HUD Telemetry (Throttled internally for text, per-frame for speed/RPM)
+    this.hud.update(dt, this.raceManager, this.vehiclePhysics, this.track.checkpoints.length);
 
     // 6. Handle Developer Debug Key Toggles
     if (this.inputManager.consumeTogglePerf()) {
@@ -256,25 +326,100 @@ export class Game {
   }
 
   /**
-   * Dynamically switch circuit preset, regenerate terrain/road, and respawn car.
+   * Restarts the current race with full grid respawn and countdown.
+   */
+  public restartRace(): void {
+    const playerSlot = this.track.startGrid.getPlayerSlot();
+    this.vehiclePhysics.setSpawn(playerSlot.position, playerSlot.heading);
+    this.vehicle.syncWithPhysics(this.vehiclePhysics);
+
+    this.aiSystem.spawnOnGrid(this.track.startGrid);
+    this.aiSystem.syncVisuals();
+
+    this.cameraManager.resetToVehicle(this.vehiclePhysics.position, this.vehiclePhysics.heading);
+    this.hud.hideResults();
+    this.raceManager.reset();
+  }
+
+  /**
+   * Resets vehicle to last valid passed checkpoint or restarts race if at start.
+   */
+  private resetVehicle(): void {
+    if (this.raceManager.state === RaceState.FINISHED || this.raceManager.state === RaceState.RESULTS) {
+      this.restartRace();
+      return;
+    }
+
+    let spawnPos = this.track.spawnPosition;
+    let spawnHeading = this.track.spawnHeading;
+
+    const cpIdx = this.raceManager.playerCheckpointManager.currentCheckpoint;
+    if (cpIdx > 0 && cpIdx < this.track.checkpoints.length) {
+      const cp = this.track.checkpoints[cpIdx];
+      spawnPos = cp.position.clone().add(cp.tangent.clone().multiplyScalar(2.0));
+      spawnHeading = Math.atan2(cp.tangent.x, cp.tangent.z);
+    } else {
+      this.restartRace();
+      return;
+    }
+
+    this.vehiclePhysics.setSpawn(spawnPos, spawnHeading);
+    this.vehicle.syncWithPhysics(this.vehiclePhysics);
+    this.cameraManager.resetToVehicle(this.vehiclePhysics.position, this.vehiclePhysics.heading);
+  }
+
+  /**
+   * Changes the number of AI opponents on the grid.
+   */
+  private changeAICount(count: number): void {
+    // Remove current AI from scene and physicsWorld
+    for (const opp of this.aiSystem.opponents) {
+      this.sceneManager.scene.remove(opp.vehicle.group);
+    }
+    this.physicsWorld.clearAIVehicles();
+    this.aiSystem.dispose();
+
+    // Create new AI roster
+    this.raceManager.config.aiCount = count;
+    this.aiSystem = new AISystem(this.track, count, this.raceManager.config.difficulty, this.raceManager.config.laps);
+    this.aiSystem.spawnOnGrid(this.track.startGrid);
+    this.aiSystem.registerWithPositionManager(this.raceManager.positionManager);
+
+    for (const opp of this.aiSystem.opponents) {
+      this.sceneManager.add(opp.vehicle.group);
+      this.physicsWorld.addAIVehicle(opp.physics);
+    }
+    this.aiSystem.syncVisuals();
+    this.restartRace();
+  }
+
+  /**
+   * Dynamically switch circuit preset, regenerate terrain/road, and respawn cars on grid.
    */
   private switchTrack(trackId: string): void {
-    // Remove old track, debug renderer & environment from scene
+    // 1. Remove old track, debug renderer & environment from scene
     this.sceneManager.scene.remove(this.track.group);
     this.sceneManager.scene.remove(this.trackDebugRenderer.group);
     this.sceneManager.scene.remove(this.environmentManager.group);
     this.environmentManager.dispose();
 
-    // Load new track
+    // 2. Remove AI from scene and physics
+    for (const opp of this.aiSystem.opponents) {
+      this.sceneManager.scene.remove(opp.vehicle.group);
+    }
+    this.physicsWorld.clearAIVehicles();
+    this.aiSystem.dispose();
+
+    // 3. Load new track
     this.track = this.trackManager.loadTrack(trackId);
     this.sceneManager.add(this.track.group);
 
-    // Rebind debug renderer
+    // 4. Rebind debug renderer
     this.trackDebugRenderer.dispose();
     this.trackDebugRenderer = new TrackDebugRenderer(this.track);
     this.sceneManager.add(this.trackDebugRenderer.group);
 
-    // Recreate environment manager for new track
+    // 5. Recreate environment manager for new track
     const newBiome = this.track.definition.environmentPreset === 'desert' ? BiomeType.DESERT_CANYON :
                      this.track.definition.environmentPreset === 'coastal' ? BiomeType.COASTAL :
                      BiomeType.ALPINE_FOREST;
@@ -286,55 +431,30 @@ export class Game {
     );
     this.sceneManager.add(this.environmentManager.group);
 
-    // Update PhysicsWorld with new track
+    // 6. Update PhysicsWorld with new track
     this.physicsWorld.setTrack(this.track);
 
-    // Reset vehicle to new track spawn
-    this.vehiclePhysics.setSpawn(this.track.spawnPosition, this.track.spawnHeading);
+    // 7. Reset player vehicle to new track grid slot
+    const playerSlot = this.track.startGrid.getPlayerSlot();
+    this.vehiclePhysics.setSpawn(playerSlot.position, playerSlot.heading);
     this.vehicle.syncWithPhysics(this.vehiclePhysics);
     this.cameraManager.resetToVehicle(this.vehiclePhysics.position, this.vehiclePhysics.heading);
 
-    // Reset race state
-    this.gameState.init(this.track.checkpoints.length);
-    this.gameState.reset();
-  }
+    // 8. Rebuild AI System for new track
+    const aiCount = this.raceManager.config.aiCount;
+    this.aiSystem = new AISystem(this.track, aiCount, this.raceManager.config.difficulty, this.raceManager.config.laps);
+    this.aiSystem.spawnOnGrid(this.track.startGrid);
+    this.aiSystem.registerWithPositionManager(this.raceManager.positionManager);
 
-  private checkCheckpoints(): void {
-    const carPos = this.vehiclePhysics.position;
-
-    // Check all checkpoints
-    for (const cp of this.track.checkpoints) {
-      if (cp.isPassedByVehicle(carPos)) {
-        this.gameState.onCheckpointPassed(cp.index);
-      }
+    for (const opp of this.aiSystem.opponents) {
+      this.sceneManager.add(opp.vehicle.group);
+      this.physicsWorld.addAIVehicle(opp.physics);
     }
-  }
+    this.aiSystem.syncVisuals();
 
-  /**
-   * Resets vehicle to the last passed valid checkpoint or the start line.
-   * Aligns orientation along track tangent, zeroes velocity, and realigns camera.
-   */
-  private resetVehicle(): void {
-    if (this.gameState.state === RaceState.FINISHED) {
-      this.gameState.reset();
-    }
-
-    let spawnPos = this.track.spawnPosition;
-    let spawnHeading = this.track.spawnHeading;
-
-    const cpIdx = this.gameState.currentCheckpoint;
-    if (cpIdx > 0 && cpIdx < this.track.checkpoints.length) {
-      const cp = this.track.checkpoints[cpIdx];
-      spawnPos = cp.position.clone().add(cp.tangent.clone().multiplyScalar(2.0));
-      spawnHeading = Math.atan2(cp.tangent.x, cp.tangent.z);
-    } else {
-      // At starting line: reset race state & countdown
-      this.gameState.reset();
-    }
-
-    this.vehiclePhysics.setSpawn(spawnPos, spawnHeading);
-    this.vehicle.syncWithPhysics(this.vehiclePhysics);
-    this.cameraManager.resetToVehicle(this.vehiclePhysics.position, this.vehiclePhysics.heading);
+    // 9. Reset race state & start countdown
+    this.hud.hideResults();
+    this.raceManager.reset();
   }
 
   private onWindowResize(): void {
@@ -349,5 +469,6 @@ export class Game {
     this.renderer.destroy();
     this.environmentManager.dispose();
     this.assetManager.dispose();
+    this.aiSystem.dispose();
   }
 }

@@ -92,13 +92,19 @@ export class Track {
    * Performs smooth longitudinal spline interpolation between adjacent samples to eliminate
    * discrete height steps and suspension bouncing.
    */
-  public queryGroundElevation(position: THREE.Vector3, isCamera: boolean = false): GroundElevationResult {
+  public queryGroundElevation(
+    position: THREE.Vector3,
+    isCamera: boolean = false,
+    hintIndex?: number
+  ): GroundElevationResult {
     const count = this.sampler.totalSamples;
-    const hint = isCamera ? this.cameraClosestSampleIndex : this.vehicleClosestSampleIndex;
+    const hint = hintIndex !== undefined
+      ? hintIndex
+      : (isCamera ? this.cameraClosestSampleIndex : this.vehicleClosestSampleIndex);
     const sampleA = this.sampler.findClosestSample(position, hint);
     if (isCamera) {
       this.cameraClosestSampleIndex = sampleA.index;
-    } else {
+    } else if (hintIndex === undefined) {
       this.vehicleClosestSampleIndex = sampleA.index;
     }
 
@@ -196,7 +202,10 @@ export class Track {
       isRoad,
       bankAngle,
       pitchAngle,
-      distance: distAlong
+      distance: distAlong,
+      closestSampleIndex: sampleA.index,
+      lateralDistance: lateralDist,
+      halfRoadWidth: roadHalf
     };
   }
 
@@ -210,17 +219,24 @@ export class Track {
   /**
    * Checks vehicle against track boundaries and physical barriers.
    */
-  public checkBoundary(position: THREE.Vector3, carHalfWidth: number = 0.95): BoundaryCheckResult {
-    const sample = this.sampler.findClosestSample(position, this.vehicleClosestSampleIndex);
-    this.vehicleClosestSampleIndex = sample.index;
+  public checkBoundary(position: THREE.Vector3, carHalfWidth: number = 0.95, hintIndex?: number): BoundaryCheckResult {
+    const hint = hintIndex !== undefined ? hintIndex : this.vehicleClosestSampleIndex;
+    const sample = this.sampler.findClosestSample(position, hint);
+    if (hintIndex === undefined) {
+      this.vehicleClosestSampleIndex = sample.index;
+    }
     return this.boundary.evaluate(position, sample, carHalfWidth);
   }
 
   /**
    * Collision check helper returning collided, normal, and penetration.
    */
-  public checkBoundaryCollision(position: THREE.Vector3, carHalfWidth: number = 0.95): { collided: boolean; normal: THREE.Vector3; penetration: number } {
-    const res = this.checkBoundary(position, carHalfWidth);
+  public checkBoundaryCollision(
+    position: THREE.Vector3,
+    carHalfWidth: number = 0.95,
+    hintIndex?: number
+  ): { collided: boolean; normal: THREE.Vector3; penetration: number } {
+    const res = this.checkBoundary(position, carHalfWidth, hintIndex);
     return {
       collided: res.collidedWithBarrier,
       normal: res.barrierNormal,

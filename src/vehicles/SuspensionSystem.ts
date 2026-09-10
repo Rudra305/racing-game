@@ -105,14 +105,14 @@ export class SuspensionSystem {
       Math.max(100, baseWheelLoad + deltaF_long + deltaF_lat)
     ];
 
-    // 2. Curb Vibration Rumble
+    // 2. Curb Vibration Rumble (Subtle, realistic road feedback)
     let curbOffset = 0;
     if (onCurb && speedKmH > 10) {
-      this.curbVibePhase += dt * (speedKmH * 0.8);
-      curbOffset = Math.sin(this.curbVibePhase) * 0.022;
+      this.curbVibePhase += dt * Math.min(65.0, speedKmH * 0.5);
+      curbOffset = Math.sin(this.curbVibePhase) * 0.009;
       this.curbVibration = Math.abs(curbOffset);
     } else {
-      this.curbVibration = 0;
+      this.curbVibration *= Math.exp(-14.0 * dt);
     }
 
     // 3. Spring-Damper Simulation per Wheel
@@ -120,8 +120,10 @@ export class SuspensionSystem {
       const w = this.wheels[i];
       w.normalForce = loads[i];
 
-      // Target displacement based on load vs spring stiffness
-      const targetDisp = -((loads[i] - baseWheelLoad) / (susp.stiffness * 800)) + (i % 2 === 0 ? curbOffset : -curbOffset);
+      // Target displacement based on load vs spring stiffness:
+      // Higher load = compression (wheel moves UP relative to chassis, targetDisp > 0)
+      // Lower load = extension/droop (wheel moves DOWN relative to chassis, targetDisp < 0)
+      const targetDisp = ((loads[i] - baseWheelLoad) / (susp.stiffness * 800)) + (i % 2 === 0 ? curbOffset : -curbOffset);
       const clampedTarget = Math.max(-susp.maxTravel, Math.min(susp.maxTravel, targetDisp));
 
       // Damped harmonic tracking
@@ -137,15 +139,22 @@ export class SuspensionSystem {
     }
 
     // 4. Visual Body Pitch and Roll Angles (radians)
-    // Pitch: front vs rear average displacement
+    // Anti-dive / anti-squat suspension linkage geometry limits pitch angle
     const frontDisp = (this.wheels[0].displacement + this.wheels[1].displacement) * 0.5;
     const rearDisp = (this.wheels[2].displacement + this.wheels[3].displacement) * 0.5;
-    const targetPitch = (frontDisp - rearDisp) / wheelBase;
+    const pitchFactor = 0.20; // Limits nosedive/squat for tight sports car dynamics
+    const maxPitch = 0.018;   // Clamped to ~1.03 degrees max pitch
+    const rawTargetPitch = ((frontDisp - rearDisp) / wheelBase) * pitchFactor;
+    const targetPitch = Math.max(-maxPitch, Math.min(maxPitch, rawTargetPitch));
 
     // Roll: left vs right average displacement
+    // Anti-roll bar (ARB) sway bar stiffness limits lateral body lean
     const leftDisp = (this.wheels[0].displacement + this.wheels[2].displacement) * 0.5;
     const rightDisp = (this.wheels[1].displacement + this.wheels[3].displacement) * 0.5;
-    const targetRoll = (leftDisp - rightDisp) / trackWidth;
+    const rollFactor = 0.20; // Limits body roll for planted GT cornering
+    const maxRoll = 0.022;   // Clamped to ~1.26 degrees max roll
+    const rawTargetRoll = ((leftDisp - rightDisp) / trackWidth) * rollFactor;
+    const targetRoll = Math.max(-maxRoll, Math.min(maxRoll, rawTargetRoll));
 
     // Smooth body motion to avoid high-frequency jitter
     const bodyDamp = 14.0;

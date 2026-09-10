@@ -21,6 +21,7 @@ export class CameraManager {
   // Dynamic feedback parameters
   private shakeIntensity: number = 0;
   private shakePhase: number = 0;
+  private smoothedAccel: number = 0;
 
   // Zero runtime allocation scratch objects
   private readonly _idealPosition: THREE.Vector3 = new THREE.Vector3();
@@ -61,11 +62,12 @@ export class CameraManager {
     this._forward.set(Math.sin(vehicleHeading), 0, Math.cos(vehicleHeading));
     this._right.set(Math.cos(vehicleHeading), 0, -Math.sin(vehicleHeading));
 
-    // 1. Dynamic Distance & Height (Acceleration Setback & Brake Push)
-    // Under hard acceleration, camera pulls back slightly; during braking, camera moves forward
-    const accelSetback = Math.max(-0.6, Math.min(0.9, acceleration * 0.04));
+    // 1. Dynamic Distance & Height (Smoothed Acceleration Setback & Brake Push)
+    // Damps high-frequency throttle/drag fluctuations to prevent high-speed camera jitter
+    this.smoothedAccel += (acceleration - this.smoothedAccel) * Math.min(1.0, 10.0 * delta);
+    const accelSetback = Math.max(-0.45, Math.min(0.65, this.smoothedAccel * 0.03));
     const effectiveDistance = this.config.distance + accelSetback;
-    const effectiveHeight = this.config.height - Math.min(0.2, accelSetback * 0.2);
+    const effectiveHeight = this.config.height - Math.min(0.15, accelSetback * 0.15);
 
     // 2. Compute Ideal Camera Position
     this._idealPosition.copy(vehiclePosition);
@@ -96,12 +98,12 @@ export class CameraManager {
     this.currentLookAt.lerp(this._idealLookAt, lookAlpha);
 
     // 5. Impact Shake & Curb Rumble Vibration
-    this.shakePhase += delta * 35.0;
-    const totalShake = Math.max(this.shakeIntensity, curbVibration * 0.6);
+    this.shakePhase += delta * 28.0;
+    const totalShake = Math.max(this.shakeIntensity, curbVibration * 0.35);
 
     if (totalShake > 0.01) {
-      const shakeX = Math.sin(this.shakePhase) * totalShake * 0.08;
-      const shakeY = Math.cos(this.shakePhase * 1.3) * totalShake * 0.05;
+      const shakeX = Math.sin(this.shakePhase) * totalShake * 0.04;
+      const shakeY = Math.cos(this.shakePhase * 1.3) * totalShake * 0.025;
       this.camera.position.x += shakeX;
       this.camera.position.y += shakeY;
     }

@@ -4,27 +4,36 @@ import { VehiclePhysics } from '../physics/VehiclePhysics';
 
 export class Vehicle {
   public readonly group: THREE.Group;
+  public readonly chassisGroup: THREE.Group;
   private config: VehicleConfig;
 
   // Visual vehicle sub-hierarchies
-  private bodyMesh!: THREE.Mesh;
-  private cabinMesh!: THREE.Mesh;
+  public bodyMesh!: THREE.Mesh;
+  public cabinMesh!: THREE.Mesh;
 
   // Wheels: [0: FL, 1: FR, 2: RL, 3: RR]
-  private wheelSteerPivots: THREE.Group[] = [];
-  private wheelMeshes: THREE.Mesh[] = [];
+  public wheelSteerPivots: THREE.Group[] = [];
+  public wheelMeshes: THREE.Mesh[] = [];
+  public bodyColor: number;
 
-  constructor(config: VehicleConfig = DEFAULT_VEHICLE_CONFIG) {
+  constructor(config: VehicleConfig = DEFAULT_VEHICLE_CONFIG, bodyColor: number = 0x1f6feb) {
     this.config = config;
+    this.bodyColor = bodyColor;
     this.group = new THREE.Group();
+    this.chassisGroup = new THREE.Group();
+    this.group.add(this.chassisGroup);
     this.buildProceduralCar();
   }
 
   public setConfig(config: VehicleConfig): void {
     this.config = config;
     // Clear and rebuild for new dimensions
-    while (this.group.children.length > 0) {
-      this.group.remove(this.group.children[0]);
+    while (this.chassisGroup.children.length > 0) {
+      this.chassisGroup.remove(this.chassisGroup.children[0]);
+    }
+    // Remove old wheel steer pivots from group
+    for (const pivot of this.wheelSteerPivots) {
+      this.group.remove(pivot);
     }
     this.wheelSteerPivots = [];
     this.wheelMeshes = [];
@@ -37,7 +46,7 @@ export class Vehicle {
     // 1. Aerodynamic Main Body Chassis
     const bodyGeo = new THREE.BoxGeometry(dim.width, 0.48, dim.length);
     const bodyMat = new THREE.MeshStandardMaterial({
-      color: 0x1f6feb, // Deep electric blue
+      color: this.bodyColor,
       roughness: 0.22,
       metalness: 0.88
     });
@@ -45,7 +54,7 @@ export class Vehicle {
     this.bodyMesh.position.y = dim.wheelRadius + 0.18;
     this.bodyMesh.castShadow = true;
     this.bodyMesh.receiveShadow = true;
-    this.group.add(this.bodyMesh);
+    this.chassisGroup.add(this.bodyMesh);
 
     // 2. Tapered Cockpit / Cabin
     const cabinGeo = new THREE.BoxGeometry(dim.width * 0.78, 0.42, dim.length * 0.48);
@@ -57,7 +66,7 @@ export class Vehicle {
     this.cabinMesh = new THREE.Mesh(cabinGeo, cabinMat);
     this.cabinMesh.position.set(0, this.bodyMesh.position.y + 0.38, -0.2);
     this.cabinMesh.castShadow = true;
-    this.group.add(this.cabinMesh);
+    this.chassisGroup.add(this.cabinMesh);
 
     // 3. Front Splitter (Dark Carbon)
     const splitterGeo = new THREE.BoxGeometry(dim.width * 1.02, 0.08, 0.4);
@@ -69,14 +78,14 @@ export class Vehicle {
     const splitter = new THREE.Mesh(splitterGeo, splitterMat);
     splitter.position.set(0, dim.wheelRadius, dim.length * 0.5 + 0.1);
     splitter.castShadow = true;
-    this.group.add(splitter);
+    this.chassisGroup.add(splitter);
 
     // 4. Rear Spoiler Wing
     const wingGeo = new THREE.BoxGeometry(dim.width * 0.95, 0.06, 0.32);
     const wing = new THREE.Mesh(wingGeo, splitterMat);
     wing.position.set(0, this.bodyMesh.position.y + 0.52, -dim.length * 0.5 + 0.1);
     wing.castShadow = true;
-    this.group.add(wing);
+    this.chassisGroup.add(wing);
 
     // 5. Front Headlights (Emissive Cyan/White)
     const headlightMat = new THREE.MeshStandardMaterial({
@@ -89,11 +98,11 @@ export class Vehicle {
 
     const leftHeadlight = new THREE.Mesh(headlightGeo, headlightMat);
     leftHeadlight.position.set(-dim.width * 0.38, this.bodyMesh.position.y + 0.08, dim.length * 0.5 + 0.01);
-    this.group.add(leftHeadlight);
+    this.chassisGroup.add(leftHeadlight);
 
     const rightHeadlight = new THREE.Mesh(headlightGeo, headlightMat);
     rightHeadlight.position.set(dim.width * 0.38, this.bodyMesh.position.y + 0.08, dim.length * 0.5 + 0.01);
-    this.group.add(rightHeadlight);
+    this.chassisGroup.add(rightHeadlight);
 
     // 6. Rear Taillights (Emissive Crimson Red)
     const taillightMat = new THREE.MeshStandardMaterial({
@@ -106,11 +115,11 @@ export class Vehicle {
 
     const leftTaillight = new THREE.Mesh(taillightGeo, taillightMat);
     leftTaillight.position.set(-dim.width * 0.38, this.bodyMesh.position.y + 0.08, -dim.length * 0.5 - 0.01);
-    this.group.add(leftTaillight);
+    this.chassisGroup.add(leftTaillight);
 
     const rightTaillight = new THREE.Mesh(taillightGeo, taillightMat);
     rightTaillight.position.set(dim.width * 0.38, this.bodyMesh.position.y + 0.08, -dim.length * 0.5 - 0.01);
-    this.group.add(rightTaillight);
+    this.chassisGroup.add(rightTaillight);
 
     // 7. Four Wheels (FL, FR, RL, RR)
     this.buildWheels();
@@ -174,7 +183,7 @@ export class Vehicle {
   }
 
   /**
-   * Synchronize visual representation with advanced Phase 2 physics state.
+   * Synchronize visual representation with physics state.
    * Updates suspension travel, pitch/roll weight transfer, steer, and wheel spin.
    */
   public syncWithPhysics(physics: VehiclePhysics): void {
@@ -183,20 +192,20 @@ export class Vehicle {
     this.group.position.y = physics.position.y;
     this.group.position.z = physics.position.z;
 
-    this.group.rotation.set(physics.roadPitchAngle, physics.heading, physics.roadBankAngle, 'YXZ');
+    // In Three.js with 'YXZ' order, an uphill slope (positive gradient) requires
+    // negative X rotation so the nose points UP to align with the climb.
+    this.group.rotation.set(-physics.roadPitchAngle, physics.heading, physics.roadBankAngle, 'YXZ');
 
-    // 2. Body Pitch (dive/squat) & Roll (cornering) from SuspensionSystem
+    // 2. Chassis Pitch (rear squat on accel, front dive on brake) & Roll (cornering)
     const susp = physics.suspensionSystem;
-    this.bodyMesh.rotation.x = -susp.bodyPitch;
-    this.bodyMesh.rotation.z = -susp.bodyRoll;
-    this.cabinMesh.rotation.x = -susp.bodyPitch;
-    this.cabinMesh.rotation.z = -susp.bodyRoll;
+    this.chassisGroup.rotation.x = susp.bodyPitch;
+    this.chassisGroup.rotation.z = susp.bodyRoll;
 
-    // 3. Wheel Suspension Travel Displacement (4 wheels)
+    // 3. Wheel Suspension Travel Displacement (4 wheels stay planted on road with subtle curb vibration)
     const baseR = this.config.dimensions.wheelRadius;
     for (let i = 0; i < 4; i++) {
-      const disp = susp.wheels[i] ? susp.wheels[i].displacement : 0;
-      this.wheelSteerPivots[i].position.y = baseR + disp;
+      const curb = (i % 2 === 0 ? 1 : -1) * susp.curbVibration * 0.5;
+      this.wheelSteerPivots[i].position.y = baseR + curb;
     }
 
     // 4. Steer angle on front wheels (FL: index 0, FR: index 1)

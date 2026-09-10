@@ -69,6 +69,7 @@ export class VehiclePhysics {
   // Track metrics
   public trackLateralDist: number = 0;
   public trackHalfWidth: number = 7.0;
+  public closestSampleIndex: number = 0;
 
   // Pre-allocated scratch objects for zero-allocation performance
   private readonly _forward: THREE.Vector3 = new THREE.Vector3();
@@ -102,6 +103,9 @@ export class VehiclePhysics {
     this.lateralG = 0;
     this.wheelRotation = 0;
     this.isAirborne = false;
+    this.closestSampleIndex = 0;
+    this.roadBankAngle = 0;
+    this.roadPitchAngle = 0;
 
     this.drivetrain.reset();
     this.steeringSystem.reset();
@@ -133,8 +137,10 @@ export class VehiclePhysics {
     trackDistance: number = 0
   ): void {
     this.groundElevation = elevation;
-    this.roadBankAngle = bankAngle;
-    this.roadPitchAngle = pitchAngle;
+    // Smooth road bank and pitch angles to eliminate high-speed micro-jitter across segments
+    const angleSmooth = 0.35;
+    this.roadBankAngle += (bankAngle - this.roadBankAngle) * angleSmooth;
+    this.roadPitchAngle += (pitchAngle - this.roadPitchAngle) * angleSmooth;
     this.isOffRoad = isOffRoad;
     this.trackDistance = trackDistance;
     if (surfaceProps) {
@@ -275,7 +281,11 @@ export class VehiclePhysics {
 
     // 10. Airborne & Vertical Dynamics
     if (this.isAirborne) {
-      this.verticalSpeed -= 9.81 * dt; // Gravity
+      // Enhanced downward pull combining gravity + aero downforce at speed
+      // Prevents floaty "moon-gravity" jumps where cars hang in the air
+      const aeroDownforceAcc = Math.min(24.0, (this.forwardSpeed * this.forwardSpeed) * 0.009);
+      const totalGravity = 9.81 + aeroDownforceAcc;
+      this.verticalSpeed -= totalGravity * dt;
       this.position.y += this.verticalSpeed * dt;
 
       // Ground contact check
@@ -285,13 +295,16 @@ export class VehiclePhysics {
         this.isAirborne = false;
       }
     } else {
-      // Check crest takeoff (vehicle drives over an abrupt cliff/crest jump at speed)
+      // Check crest takeoff: only launch on major cliffs/crests at high speed
       const drop = this.position.y - this.groundElevation;
-      if (drop > 0.85 && this.forwardSpeed > 22.0) {
+      if (drop > 1.4 && Math.abs(this.forwardSpeed) > 28.0) {
         this.isAirborne = true;
         this.verticalSpeed = 0;
       } else {
-        this.position.y = this.groundElevation;
+        // Firmly track ground elevation with high-frequency critical damping (35 rad/s)
+        // Absorbs road spline segment transitions and eliminates 60Hz vertical jitter
+        const vertDiff = this.groundElevation - this.position.y;
+        this.position.y += vertDiff * Math.min(1.0, 35.0 * dt);
       }
     }
 

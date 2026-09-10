@@ -1,0 +1,9 @@
+export enum RaceState {
+  LOADING = 'LOADING',
+  GRID = 'GRID',
+  COUNTDOWN = 'COUNTDOWN',
+  RACING = 'RACING',
+  PAUSED = 'PAUSED',
+  FINISHED = 'FINISHED',
+  RESULTS = 'RESULTS'
+}

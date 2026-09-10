@@ -1,10 +1,13 @@
 import { SteeringSystem, SteeringPreset, SteeringAssistMode } from '../vehicles/SteeringSystem';
 import { VEHICLE_PRESETS, VehicleConfig } from '../vehicles/VehicleConfig';
+import { AIDifficultyLevel } from '../game/race/RaceConfig';
 
 export interface SettingsModalCallbacks {
   onVehiclePresetChanged: (config: VehicleConfig) => void;
   onTrackChanged: (trackId: string) => void;
   onQualityChanged?: (scale: number) => void;
+  onAIDifficultyChanged?: (difficulty: AIDifficultyLevel) => void;
+  onAICountChanged?: (count: number) => void;
   onClosed: () => void;
 }
 
@@ -24,6 +27,8 @@ export class SettingsModal {
   private assistSelect!: HTMLSelectElement;
   private presetSelect!: HTMLSelectElement;
   private carPresetSelect!: HTMLSelectElement;
+  private aiCountSelect!: HTMLSelectElement;
+  private aiDifficultySelect!: HTMLSelectElement;
 
   constructor(steeringSystem: SteeringSystem, callbacks: SettingsModalCallbacks) {
     this.steeringSystem = steeringSystem;
@@ -80,6 +85,28 @@ export class SettingsModal {
             <option value="coastal-speedway">Coastal Speedway (High-Speed Sweepers, Ocean Plains)</option>
             <option value="grand-prix">Grand Prix Technical (Technical Chicanes, Rolling Hills)</option>
           </select>
+        </div>
+
+        <!-- AI Grid & Difficulty -->
+        <div style="display: flex; gap: 14px; margin-bottom: 20px;">
+          <div style="flex: 1;">
+            <label style="display: block; font-size: 11px; font-weight: 700; color: #8b949e; text-transform: uppercase; margin-bottom: 8px; letter-spacing: 0.08em;">AI Opponents</label>
+            <select id="setting-ai-count" style="width: 100%; background: #161d27; border: 1px solid rgba(255,255,255,0.15); color: #fff; padding: 8px 10px; border-radius: 6px; font-size: 12px; font-family: monospace; cursor: pointer;">
+              <option value="7" selected>7 AI (8 Cars Total)</option>
+              <option value="5">5 AI (6 Cars Total)</option>
+              <option value="3">3 AI (4 Cars Total)</option>
+              <option value="1">1 AI (1v1 Duel)</option>
+            </select>
+          </div>
+          <div style="flex: 1;">
+            <label style="display: block; font-size: 11px; font-weight: 700; color: #8b949e; text-transform: uppercase; margin-bottom: 8px; letter-spacing: 0.08em;">AI Difficulty</label>
+            <select id="setting-ai-difficulty" style="width: 100%; background: #161d27; border: 1px solid rgba(255,255,255,0.15); color: #fff; padding: 8px 10px; border-radius: 6px; font-size: 12px; font-family: monospace; cursor: pointer;">
+              <option value="EASY">Easy (Relaxed)</option>
+              <option value="NORMAL" selected>Normal (Balanced)</option>
+              <option value="HARD">Hard (Aggressive)</option>
+              <option value="EXPERT">Expert (Flawless)</option>
+            </select>
+          </div>
         </div>
 
         <!-- Graphics & Environment Quality -->
@@ -173,6 +200,8 @@ export class SettingsModal {
     this.assistSelect = container.querySelector('#setting-assist') as HTMLSelectElement;
     this.presetSelect = container.querySelector('#setting-preset') as HTMLSelectElement;
     this.carPresetSelect = container.querySelector('#setting-car-preset') as HTMLSelectElement;
+    this.aiCountSelect = container.querySelector('#setting-ai-count') as HTMLSelectElement;
+    this.aiDifficultySelect = container.querySelector('#setting-ai-difficulty') as HTMLSelectElement;
 
     // Wire Event Listeners
     container.querySelector('#btn-close-settings')?.addEventListener('click', () => this.hide());
@@ -180,6 +209,16 @@ export class SettingsModal {
     container.querySelector('#btn-reset-settings')?.addEventListener('click', () => {
       this.steeringSystem.resetToDefaults();
       this.syncFromSettings();
+    });
+
+    this.aiCountSelect.addEventListener('change', () => {
+      const count = parseInt(this.aiCountSelect.value, 10);
+      this.callbacks.onAICountChanged?.(count);
+    });
+
+    this.aiDifficultySelect.addEventListener('change', () => {
+      const diff = this.aiDifficultySelect.value as AIDifficultyLevel;
+      this.callbacks.onAIDifficultyChanged?.(diff);
     });
 
     this.trackPresetSelect.addEventListener('change', () => {
