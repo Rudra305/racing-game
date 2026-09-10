@@ -1,91 +1,67 @@
-export enum SurfaceType {
-  ASPHALT = 'ASPHALT',
-  KERB = 'KERB',
-  GRASS = 'GRASS',
-  GRAVEL = 'GRAVEL'
-}
+import { SurfaceType, SurfaceProperties, SURFACE_PROPERTIES } from '../terrain/TerrainSurface';
 
-export interface SurfaceProperties {
-  type: SurfaceType;
-  grip: number;
-  rollingResistance: number;
-  vibration: number;
-}
-
-export const SURFACE_PRESETS: Record<SurfaceType, SurfaceProperties> = {
-  [SurfaceType.ASPHALT]: {
-    type: SurfaceType.ASPHALT,
-    grip: 1.0,
-    rollingResistance: 1.0,
-    vibration: 0
-  },
-  [SurfaceType.KERB]: {
-    type: SurfaceType.KERB,
-    grip: 0.95,
-    rollingResistance: 1.15,
-    vibration: 1.0
-  },
-  [SurfaceType.GRASS]: {
-    type: SurfaceType.GRASS,
-    grip: 0.48,
-    rollingResistance: 3.2,
-    vibration: 0.25
-  },
-  [SurfaceType.GRAVEL]: {
-    type: SurfaceType.GRAVEL,
-    grip: 0.42,
-    rollingResistance: 4.0,
-    vibration: 0.6
-  }
-};
+export { SurfaceType, SURFACE_PROPERTIES };
+export type { SurfaceProperties };
 
 export class SurfaceSystem {
   public currentSurface: SurfaceType = SurfaceType.ASPHALT;
   public effectiveGrip: number = 1.0;
   public effectiveRollingResistance: number = 1.0;
+  public accelerationModifier: number = 1.0;
+  public brakingModifier: number = 1.0;
   public isOnKerb: boolean = false;
 
   public reset(): void {
     this.currentSurface = SurfaceType.ASPHALT;
     this.effectiveGrip = 1.0;
     this.effectiveRollingResistance = 1.0;
+    this.accelerationModifier = 1.0;
+    this.brakingModifier = 1.0;
     this.isOnKerb = false;
   }
 
   /**
-   * Evaluates track surface based on vehicle distance from track centerline.
+   * Updates surface properties using direct track/terrain query result with smooth blending.
+   */
+  public updateWithProperties(targetProps: SurfaceProperties): SurfaceProperties {
+    this.currentSurface = targetProps.type;
+    this.isOnKerb = targetProps.type === SurfaceType.KERB;
+
+    // Smooth transition between surfaces to prevent sharp physics shocks
+    const blendRate = 0.20;
+    this.effectiveGrip += (targetProps.grip - this.effectiveGrip) * blendRate;
+    this.effectiveRollingResistance += (targetProps.rollingResistance - this.effectiveRollingResistance) * blendRate;
+    this.accelerationModifier += (targetProps.accelerationModifier - this.accelerationModifier) * blendRate;
+    this.brakingModifier += (targetProps.brakingModifier - this.brakingModifier) * blendRate;
+
+    return {
+      type: this.currentSurface,
+      grip: this.effectiveGrip,
+      rollingResistance: this.effectiveRollingResistance,
+      accelerationModifier: this.accelerationModifier,
+      brakingModifier: this.brakingModifier,
+      vibration: targetProps.vibration,
+      colorHex: targetProps.colorHex
+    };
+  }
+
+  /**
+   * Fallback for lateral distance based surface estimation
    */
   public update(lateralDistance: number, halfRoadWidth: number): SurfaceProperties {
     const absLat = Math.abs(lateralDistance);
-    const kerbStart = halfRoadWidth - 0.7;
-    const roadEdge = halfRoadWidth;
+    let targetType = SurfaceType.ASPHALT;
 
-    let targetSurface = SurfaceType.ASPHALT;
-
-    if (absLat < kerbStart) {
-      targetSurface = SurfaceType.ASPHALT;
-      this.isOnKerb = false;
-    } else if (absLat < roadEdge + 0.5) {
-      targetSurface = SurfaceType.KERB;
-      this.isOnKerb = true;
+    if (absLat < halfRoadWidth - 0.6) {
+      targetType = SurfaceType.ASPHALT;
+    } else if (absLat <= halfRoadWidth + 0.9) {
+      targetType = SurfaceType.KERB;
+    } else if (absLat <= halfRoadWidth + 6.0) {
+      targetType = SurfaceType.DIRT;
     } else {
-      targetSurface = SurfaceType.GRASS;
-      this.isOnKerb = false;
+      targetType = SurfaceType.GRASS;
     }
 
-    this.currentSurface = targetSurface;
-    const targetProps = SURFACE_PRESETS[targetSurface];
-
-    // Smooth transition between surfaces to prevent sharp physics steps
-    const blendRate = 0.15;
-    this.effectiveGrip += (targetProps.grip - this.effectiveGrip) * blendRate;
-    this.effectiveRollingResistance += (targetProps.rollingResistance - this.effectiveRollingResistance) * blendRate;
-
-    return {
-      type: targetSurface,
-      grip: this.effectiveGrip,
-      rollingResistance: this.effectiveRollingResistance,
-      vibration: targetProps.vibration
-    };
+    return this.updateWithProperties(SURFACE_PROPERTIES[targetType]);
   }
 }

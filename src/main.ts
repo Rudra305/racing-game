@@ -3,6 +3,7 @@ import { Game } from './core/Game';
 window.addEventListener('DOMContentLoaded', () => {
   try {
     const game = new Game();
+    (window as any).game = game;
     game.init();
   } catch (error) {
     console.error('Failed to initialize 3D Racing Game:', error);

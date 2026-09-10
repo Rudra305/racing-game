@@ -311,7 +311,7 @@
     <div class="hud-bottom">
       <div class="controls-hint">
         <div><span class="key-badge">W / ↑</span> Accel <span class="key-badge">S / ↓</span> Brake/Rev <span class="key-badge">A / D</span> Steer <span class="key-badge">Space</span> Drift</div>
-        <div><span class="key-badge">R</span> Reset <span class="key-badge clickable-badge" id="btn-toggle-perf">P / F1</span> Telemetry <span class="key-badge">J</span> Jump Test</div>
+        <div><span class="key-badge">R</span> Reset <span class="key-badge clickable-badge" id="btn-toggle-perf">P / F1</span> Telemetry <span class="key-badge">F3 / K</span> Track Debug</div>
         <div style="margin-top: 4px;"><span class="surface-indicator" id="hud-surface">ASPHALT</span></div>
       </div>
 
@@ -348,6 +348,9 @@
     <div>Slip Angle: <span id="perf-slip">0.0°</span> | Lat G: <span id="perf-latg">0.0</span></div>
     <div>Lat Vel: <span id="perf-latvel">0.0</span> m/s | Accel: <span id="perf-accel">0.0</span> m/s²</div>
     <div>Surface: <span id="perf-surface">ASPHALT</span> | Airborne: <span id="perf-air">NO</span></div>
+    <div style="margin-top: 6px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 4px;"><strong>TRACK & TERRAIN</strong></div>
+    <div>Elevation: <span id="perf-elevation">0.0</span> m | Dist: <span id="perf-distance">0.0</span> m</div>
+    <div>Gradient: <span id="perf-gradient">0.0</span>% | Bank: <span id="perf-banking">0.0</span>°</div>
   </div>
 
   <script type="module" src="/src/main.ts"></script>

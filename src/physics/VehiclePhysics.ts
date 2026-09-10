@@ -24,6 +24,10 @@ export interface VehicleTelemetry {
   driftAngle: number;
   isAirborne: boolean;
   curbVibration: number;
+  elevation: number;
+  gradient: number;
+  banking: number;
+  trackDistance: number;
 }
 
 export class VehiclePhysics {
@@ -55,9 +59,16 @@ export class VehiclePhysics {
   private steerInput: number = 0;
   private handbrakeInput: boolean = false;
 
-  // Track reference for surface & ground
-  private trackLateralDist: number = 0;
-  private trackHalfWidth: number = 7.0;
+  // 3D Terrain & Road State
+  public groundElevation: number = 0;
+  public roadBankAngle: number = 0;  // radians
+  public roadPitchAngle: number = 0; // radians
+  public trackDistance: number = 0;
+  public isOffRoad: boolean = false;
+
+  // Track metrics
+  public trackLateralDist: number = 0;
+  public trackHalfWidth: number = 7.0;
 
   // Pre-allocated scratch objects for zero-allocation performance
   private readonly _forward: THREE.Vector3 = new THREE.Vector3();
@@ -113,6 +124,24 @@ export class VehiclePhysics {
     this.trackHalfWidth = halfWidth;
   }
 
+  public setGroundMetrics(
+    elevation: number,
+    bankAngle: number,
+    pitchAngle: number,
+    surfaceProps?: any,
+    isOffRoad: boolean = false,
+    trackDistance: number = 0
+  ): void {
+    this.groundElevation = elevation;
+    this.roadBankAngle = bankAngle;
+    this.roadPitchAngle = pitchAngle;
+    this.isOffRoad = isOffRoad;
+    this.trackDistance = trackDistance;
+    if (surfaceProps) {
+      this.surfaceSystem.updateWithProperties(surfaceProps);
+    }
+  }
+
   /**
    * Fixed Timestep Physics Simulation Step (60 Hz)
    */
@@ -121,7 +150,13 @@ export class VehiclePhysics {
     const speedKmH = this.speedKmH;
 
     // 1. Surface Evaluation
-    const surfaceProps = this.surfaceSystem.update(this.trackLateralDist, this.trackHalfWidth);
+    const surfaceProps = {
+      type: this.surfaceSystem.currentSurface,
+      grip: this.surfaceSystem.effectiveGrip,
+      rollingResistance: this.surfaceSystem.effectiveRollingResistance,
+      accelerationModifier: this.surfaceSystem.accelerationModifier,
+      brakingModifier: this.surfaceSystem.brakingModifier
+    };
 
     // 2. Reverse Gear Detection: only engage reverse when vehicle is virtually stopped
     if (Math.abs(this.forwardSpeed) < 0.2 && this.brakeInput > 0.2 && this.throttleInput < 0.05) {
@@ -185,6 +220,10 @@ export class VehiclePhysics {
       netLongForce = tireForces.totalDriveForce - appliedBrake - aeroDrag - rollingResistance;
     }
 
+    // Slope Gravity Force: opposes climbing, aids descent
+    const slopeGravity = -cfg.mass * 9.81 * Math.sin(this.roadPitchAngle);
+    netLongForce += slopeGravity;
+
     this.acceleration = netLongForce / cfg.mass;
     this.forwardSpeed += this.acceleration * dt;
 
@@ -240,13 +279,20 @@ export class VehiclePhysics {
       this.position.y += this.verticalSpeed * dt;
 
       // Ground contact check
-      if (this.position.y <= 0) {
-        this.position.y = 0;
+      if (this.position.y <= this.groundElevation) {
+        this.position.y = this.groundElevation;
         this.verticalSpeed = 0;
         this.isAirborne = false;
       }
     } else {
-      this.position.y = 0;
+      // Check crest takeoff (vehicle drives over an abrupt cliff/crest jump at speed)
+      const drop = this.position.y - this.groundElevation;
+      if (drop > 0.85 && this.forwardSpeed > 22.0) {
+        this.isAirborne = true;
+        this.verticalSpeed = 0;
+      } else {
+        this.position.y = this.groundElevation;
+      }
     }
 
     // 11. World Transform Integration
@@ -294,29 +340,33 @@ export class VehiclePhysics {
       isDrifting: this.tireSystem.isDrifting,
       driftAngle: this.tireSystem.driftAngle,
       isAirborne: this.isAirborne,
-      curbVibration: this.suspensionSystem.curbVibration
+      curbVibration: this.suspensionSystem.curbVibration,
+      elevation: this.groundElevation,
+      gradient: Math.tan(this.roadPitchAngle) * 100,
+      banking: THREE.MathUtils.radToDeg(this.roadBankAngle),
+      trackDistance: this.trackDistance
     };
   }
 
   /**
    * Collision response with track boundaries.
-   * Damps momentum, bounces slightly, and kicks yaw during high-speed impacts.
+   * Damps momentum cleanly and nudges out of penetration.
    */
   public applyCollisionImpulse(normal: THREE.Vector3, penetration: number): void {
     // Eject vehicle out of barrier penetration
-    this.position.x += normal.x * (penetration + 0.08);
-    this.position.z += normal.z * (penetration + 0.08);
+    const safePen = Math.min(0.35, Math.max(0.02, penetration));
+    this.position.x += normal.x * (safePen + 0.04);
+    this.position.z += normal.z * (safePen + 0.04);
 
     const speed = Math.abs(this.forwardSpeed);
     if (speed < 12.0) {
       // Low-speed bump: elastic rebound
-      this.forwardSpeed *= 0.7;
+      this.forwardSpeed *= 0.75;
       this.lateralSpeed *= 0.5;
     } else {
-      // High-speed collision: heavy momentum loss + slight yaw deflection
-      this.forwardSpeed *= 0.45;
-      this.lateralSpeed *= 0.3;
-      this.heading += normal.x * 0.15;
+      // High-speed collision: damp momentum cleanly
+      this.forwardSpeed *= 0.65;
+      this.lateralSpeed *= 0.4;
     }
   }
 

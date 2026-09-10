@@ -54,7 +54,8 @@ export class CameraManager {
     vehicleHeading: number,
     speedNorm: number,
     acceleration: number,
-    curbVibration: number
+    curbVibration: number,
+    minGroundY: number = 0
   ): void {
     // Forward & right unit vectors
     this._forward.set(Math.sin(vehicleHeading), 0, Math.cos(vehicleHeading));
@@ -109,8 +110,9 @@ export class CameraManager {
     this.shakeIntensity *= Math.exp(-6.0 * delta);
 
     // 6. Camera Collision & Ground Clipping Prevention
-    if (this.camera.position.y < 0.95) {
-      this.camera.position.y = 0.95;
+    const safetyFloor = minGroundY + 1.1;
+    if (this.camera.position.y < safetyFloor) {
+      this.camera.position.y = safetyFloor;
     }
 
     this.camera.lookAt(this.currentLookAt);

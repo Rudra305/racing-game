@@ -178,12 +178,12 @@ export class Vehicle {
    * Updates suspension travel, pitch/roll weight transfer, steer, and wheel spin.
    */
   public syncWithPhysics(physics: VehiclePhysics): void {
-    // 1. Position & Heading
+    // 1. Position & 3D Orientation (Yaw, Pitch along road gradient, Roll along road banking)
     this.group.position.x = physics.position.x;
     this.group.position.y = physics.position.y;
     this.group.position.z = physics.position.z;
 
-    this.group.rotation.set(0, physics.heading, 0, 'YXZ');
+    this.group.rotation.set(physics.roadPitchAngle, physics.heading, physics.roadBankAngle, 'YXZ');
 
     // 2. Body Pitch (dive/squat) & Roll (cornering) from SuspensionSystem
     const susp = physics.suspensionSystem;

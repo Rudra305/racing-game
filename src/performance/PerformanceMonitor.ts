@@ -20,6 +20,12 @@ export class PerformanceMonitor {
   private surfaceEl: HTMLElement | null;
   private airEl: HTMLElement | null;
 
+  // Track & terrain telemetry elements
+  private elevationEl: HTMLElement | null;
+  private distanceEl: HTMLElement | null;
+  private gradientEl: HTMLElement | null;
+  private bankingEl: HTMLElement | null;
+
   private isVisible: boolean = false;
   private frameCount: number = 0;
   private timeAccumulator: number = 0;
@@ -43,6 +49,11 @@ export class PerformanceMonitor {
     this.accelEl = document.getElementById('perf-accel');
     this.surfaceEl = document.getElementById('perf-surface');
     this.airEl = document.getElementById('perf-air');
+
+    this.elevationEl = document.getElementById('perf-elevation');
+    this.distanceEl = document.getElementById('perf-distance');
+    this.gradientEl = document.getElementById('perf-gradient');
+    this.bankingEl = document.getElementById('perf-banking');
 
     const toggleBtn = document.getElementById('btn-toggle-perf');
     if (toggleBtn) {
@@ -94,6 +105,11 @@ export class PerformanceMonitor {
         if (this.accelEl) this.accelEl.textContent = telemetry.acceleration.toFixed(1);
         if (this.surfaceEl) this.surfaceEl.textContent = telemetry.surface;
         if (this.airEl) this.airEl.textContent = telemetry.isAirborne ? 'YES' : 'NO';
+
+        if (this.elevationEl) this.elevationEl.textContent = telemetry.elevation.toFixed(1);
+        if (this.distanceEl) this.distanceEl.textContent = telemetry.trackDistance.toFixed(0);
+        if (this.gradientEl) this.gradientEl.textContent = telemetry.gradient.toFixed(1);
+        if (this.bankingEl) this.bankingEl.textContent = telemetry.banking.toFixed(1);
       }
     }
   }

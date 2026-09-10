@@ -3,6 +3,7 @@ import { VEHICLE_PRESETS, VehicleConfig } from '../vehicles/VehicleConfig';
 
 export interface SettingsModalCallbacks {
   onVehiclePresetChanged: (config: VehicleConfig) => void;
+  onTrackChanged: (trackId: string) => void;
   onClosed: () => void;
 }
 
@@ -13,6 +14,7 @@ export class SettingsModal {
   private isVisible: boolean = false;
 
   // DOM Inputs
+  private trackPresetSelect!: HTMLSelectElement;
   private sensitivitySlider!: HTMLInputElement;
   private sensitivityVal!: HTMLElement;
   private returnSpeedSlider!: HTMLInputElement;
@@ -66,6 +68,16 @@ export class SettingsModal {
             <span>⚙️</span> Vehicle & Steering Settings
           </h2>
           <button id="btn-close-settings" style="background: none; border: none; color: #8b949e; font-size: 20px; cursor: pointer; padding: 4px 8px; border-radius: 4px; transition: color 0.15s;">✕</button>
+        </div>
+
+        <!-- Circuit Track Selection -->
+        <div style="margin-bottom: 20px;">
+          <label style="display: block; font-size: 11px; font-weight: 700; color: #8b949e; text-transform: uppercase; margin-bottom: 8px; letter-spacing: 0.08em;">Race Circuit (Track & Terrain)</label>
+          <select id="setting-track-preset" style="width: 100%; background: #161d27; border: 1px solid rgba(88, 166, 255, 0.4); color: #58a6ff; padding: 8px 12px; border-radius: 6px; font-size: 13px; font-family: monospace; cursor: pointer; font-weight: 700;">
+            <option value="alpine-circuit">Alpine Test Circuit (42m Elevation, Banked Hairpin)</option>
+            <option value="coastal-speedway">Coastal Speedway (High-Speed Sweepers, Ocean Plains)</option>
+            <option value="grand-prix">Grand Prix Technical (Technical Chicanes, Rolling Hills)</option>
+          </select>
         </div>
 
         <!-- Vehicle Preset -->
@@ -139,6 +151,7 @@ export class SettingsModal {
     this.modalEl = container;
 
     // Cache elements
+    this.trackPresetSelect = container.querySelector('#setting-track-preset') as HTMLSelectElement;
     this.sensitivitySlider = container.querySelector('#setting-sensitivity') as HTMLInputElement;
     this.sensitivityVal = container.querySelector('#val-sensitivity') as HTMLElement;
     this.returnSpeedSlider = container.querySelector('#setting-return-speed') as HTMLInputElement;
@@ -153,6 +166,11 @@ export class SettingsModal {
     container.querySelector('#btn-reset-settings')?.addEventListener('click', () => {
       this.steeringSystem.resetToDefaults();
       this.syncFromSettings();
+    });
+
+    this.trackPresetSelect.addEventListener('change', () => {
+      const trackId = this.trackPresetSelect.value;
+      this.callbacks.onTrackChanged(trackId);
     });
 
     this.sensitivitySlider.addEventListener('input', () => {
@@ -195,6 +213,12 @@ export class SettingsModal {
         this.callbacks.onVehiclePresetChanged(presetConfig);
       }
     });
+  }
+
+  public setTrack(trackId: string): void {
+    if (this.trackPresetSelect) {
+      this.trackPresetSelect.value = trackId;
+    }
   }
 
   public syncFromSettings(): void {

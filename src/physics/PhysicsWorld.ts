@@ -17,15 +17,28 @@ export class PhysicsWorld {
     this.onImpact = onImpact;
   }
 
+  public setTrack(track: Track): void {
+    this.track = track;
+  }
+
   public setImpactCallback(cb: ImpactCallback): void {
     this.onImpact = cb;
   }
 
   public step(dt: number): void {
-    // 1. Pass active track boundary & surface distance metrics to vehicle physics
+    // 1. Query ground elevation, surface, banking, pitch, and track distance from Track
+    const groundInfo = this.track.queryGroundElevation(this.vehiclePhysics.position);
+    this.vehiclePhysics.setGroundMetrics(
+      groundInfo.height,
+      groundInfo.bankAngle,
+      groundInfo.pitchAngle,
+      groundInfo.surface,
+      !groundInfo.isRoad,
+      groundInfo.distance
+    );
     this.vehiclePhysics.setTrackMetrics(this.track.lastLateralDistance, this.track.halfRoadWidth);
 
-    // 2. Advance vehicle internal physics (drivetrain, steering, suspension, tires, aero)
+    // 2. Advance vehicle internal physics (drivetrain, steering, suspension, tires, aero, slope gravity)
     this.vehiclePhysics.step(dt);
 
     // 3. Query track boundaries for barrier collision

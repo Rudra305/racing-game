@@ -7,6 +7,8 @@ import { SceneManager } from '../rendering/SceneManager';
 import { CameraManager } from '../rendering/CameraManager';
 import { InputManager } from '../input/InputManager';
 import { Track } from '../tracks/Track';
+import { TrackManager } from '../tracks/TrackManager';
+import { TrackDebugRenderer } from '../debug/TrackDebugRenderer';
 import { Vehicle } from '../vehicles/Vehicle';
 import { VehicleController } from '../vehicles/VehicleController';
 import { VehiclePhysics } from '../physics/VehiclePhysics';
@@ -24,7 +26,9 @@ export class Game {
   private renderer!: Renderer;
   private sceneManager!: SceneManager;
   private cameraManager!: CameraManager;
+  private trackManager!: TrackManager;
   private track!: Track;
+  private trackDebugRenderer!: TrackDebugRenderer;
   private vehicle!: Vehicle;
   private vehiclePhysics!: VehiclePhysics;
   private vehicleController!: VehicleController;
@@ -61,9 +65,14 @@ export class Game {
     this.sceneManager = new SceneManager();
     this.cameraManager = new CameraManager(GAME_CONFIG.camera);
 
-    // 3. Track Generation & Insertion
-    this.track = new Track(GAME_CONFIG.track);
+    // 3. Track Generation & Insertion via TrackManager
+    this.trackManager = new TrackManager();
+    this.track = this.trackManager.loadTrack('alpine-circuit');
     this.sceneManager.add(this.track.group);
+
+    // Track Debug Visualizer (F3 / K to toggle)
+    this.trackDebugRenderer = new TrackDebugRenderer(this.track);
+    this.sceneManager.add(this.trackDebugRenderer.group);
 
     // 4. Vehicle & Physics Setup
     this.vehiclePhysics = new VehiclePhysics();
@@ -94,6 +103,9 @@ export class Game {
         this.vehiclePhysics.setConfig(newConfig);
         this.vehicle.setConfig(newConfig);
         this.cameraManager.resetToVehicle(this.vehiclePhysics.position, this.vehiclePhysics.heading);
+      },
+      onTrackChanged: (trackId) => {
+        this.switchTrack(trackId);
       },
       onClosed: () => {
         canvas.focus();
@@ -178,14 +190,16 @@ export class Game {
     // 2. Synchronize Visual Vehicle with Phase 2 Physics State
     this.vehicle.syncWithPhysics(this.vehiclePhysics);
 
-    // 3. Update Camera Follow, Acceleration Setback, Curb Shake & Speed-Dependent FOV
+    // 3. Update Camera Follow, Acceleration Setback, Curb Shake & Speed-Dependent FOV with terrain safety
+    const groundInfo = this.track.queryGroundElevation(this.cameraManager.camera.position, true);
     this.cameraManager.update(
       dt,
       this.vehiclePhysics.position,
       this.vehiclePhysics.heading,
       this.vehiclePhysics.normalizedSpeed,
       this.vehiclePhysics.acceleration,
-      this.vehiclePhysics.suspensionSystem.curbVibration
+      this.vehiclePhysics.suspensionSystem.curbVibration,
+      groundInfo.height
     );
 
     // 4. Update Shadow Camera Target
@@ -204,12 +218,45 @@ export class Game {
     if (this.inputManager.consumeToggleCheckpoints()) {
       this.track.toggleCheckpointDebug();
     }
+    if (this.inputManager.consumeToggleTrackDebug()) {
+      this.trackDebugRenderer.toggle();
+    }
 
     // 7. Update Performance & Vehicle Telemetry
     this.perfMonitor.update(dt, this.renderer.instance, this.vehiclePhysics.telemetry);
 
     // 8. Render Frame
     this.renderer.render(this.sceneManager.scene, this.cameraManager.camera);
+  }
+
+  /**
+   * Dynamically switch circuit preset, regenerate terrain/road, and respawn car.
+   */
+  private switchTrack(trackId: string): void {
+    // Remove old track & debug renderer from scene
+    this.sceneManager.scene.remove(this.track.group);
+    this.sceneManager.scene.remove(this.trackDebugRenderer.group);
+
+    // Load new track
+    this.track = this.trackManager.loadTrack(trackId);
+    this.sceneManager.add(this.track.group);
+
+    // Rebind debug renderer
+    this.trackDebugRenderer.dispose();
+    this.trackDebugRenderer = new TrackDebugRenderer(this.track);
+    this.sceneManager.add(this.trackDebugRenderer.group);
+
+    // Update PhysicsWorld with new track
+    this.physicsWorld.setTrack(this.track);
+
+    // Reset vehicle to new track spawn
+    this.vehiclePhysics.setSpawn(this.track.spawnPosition, this.track.spawnHeading);
+    this.vehicle.syncWithPhysics(this.vehiclePhysics);
+    this.cameraManager.resetToVehicle(this.vehiclePhysics.position, this.vehiclePhysics.heading);
+
+    // Reset race state
+    this.gameState.init(this.track.checkpoints.length);
+    this.gameState.reset();
   }
 
   private checkCheckpoints(): void {

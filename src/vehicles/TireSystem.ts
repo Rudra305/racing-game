@@ -82,6 +82,11 @@ export class TireSystem {
       brakeForce = brakeInput * maxBrake;
     }
 
+    // If airborne or completely unweighted, zero out drive force applied to ground
+    if (fzTotal <= 1.0) {
+      driveForce = 0;
+    }
+
     // 4. Lateral Grip & Cornering Stiffness
     let frontGripFactor = cfg.handling.baseGrip * surfaceGrip;
     let rearGripFactor = cfg.handling.baseGrip * surfaceGrip;
@@ -93,7 +98,7 @@ export class TireSystem {
     }
 
     // Drift Detection & Sustained Drift Handling
-    if (this.driftAngle > 12.0 && absSpeed > 10.0) {
+    if (this.driftAngle > 12.0 && absSpeed > 10.0 && fzTotal > 1.0) {
       this.isDrifting = true;
       this.driftTime += dt;
       // In drift: rear grip remains partially reduced for smooth slide continuation
@@ -104,10 +109,15 @@ export class TireSystem {
     }
 
     // Linear-to-saturation tire cornering forces
-    // F_lat = -C_alpha * alpha, clamped by normal load * friction coefficient
+    // Guard against division-by-zero when wheels are airborne/unweighted (fzTotal <= 1.0)
     const muTire = 1.15;
-    const maxLatFront = (fzFront / fzTotal) * (cfg.mass * 9.81 * muTire * surfaceGrip);
-    const maxLatRear = (fzRear / fzTotal) * (cfg.mass * 9.81 * muTire * surfaceGrip);
+    let maxLatFront = 0;
+    let maxLatRear = 0;
+
+    if (fzTotal > 1.0) {
+      maxLatFront = (fzFront / fzTotal) * (cfg.mass * 9.81 * muTire * surfaceGrip);
+      maxLatRear = (fzRear / fzTotal) * (cfg.mass * 9.81 * muTire * surfaceGrip);
+    }
 
     const latForceFront = -Math.sign(alphaFront) * Math.min(maxLatFront, Math.abs(alphaFront) * frontGripFactor * 450);
     const latForceRear = -Math.sign(alphaRear) * Math.min(maxLatRear, Math.abs(alphaRear) * rearGripFactor * 450);

@@ -8,6 +8,7 @@ export interface InputActions {
   togglePerfRequested: boolean;
   toggleCollisionsRequested: boolean;
   toggleCheckpointsRequested: boolean;
+  toggleTrackDebugRequested: boolean;
   toggleSettingsRequested: boolean;
   jumpRequested: boolean;
 }
@@ -24,6 +25,7 @@ export class InputManager {
     togglePerfRequested: false,
     toggleCollisionsRequested: false,
     toggleCheckpointsRequested: false,
+    toggleTrackDebugRequested: false,
     toggleSettingsRequested: false,
     jumpRequested: false
   };
@@ -76,8 +78,13 @@ export class InputManager {
       event.preventDefault();
       this.actions.toggleCollisionsRequested = true;
     }
-    // Checkpoint arches toggle: K or F3
+    // Track & Spline debug toggle: K or F3
     if (code === 'KeyK' || key === 'k' || code === 'F3' || key === 'f3') {
+      event.preventDefault();
+      this.actions.toggleTrackDebugRequested = true;
+    }
+    // Checkpoint arches toggle: F4
+    if (code === 'F4' || key === 'f4') {
       event.preventDefault();
       this.actions.toggleCheckpointsRequested = true;
     }
@@ -165,6 +172,12 @@ export class InputManager {
   public consumeToggleCheckpoints(): boolean {
     const res = this.actions.toggleCheckpointsRequested;
     this.actions.toggleCheckpointsRequested = false;
+    return res;
+  }
+
+  public consumeToggleTrackDebug(): boolean {
+    const res = this.actions.toggleTrackDebugRequested;
+    this.actions.toggleTrackDebugRequested = false;
     return res;
   }
 
