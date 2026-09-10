@@ -17,6 +17,8 @@ import { HUD } from '../ui/HUD';
 import { PerformanceMonitor } from '../performance/PerformanceMonitor';
 import { SettingsModal } from '../ui/SettingsModal';
 import { AssetManager } from '../assets/AssetManager';
+import { EnvironmentManager } from '../environment/EnvironmentManager';
+import { BiomeType } from '../environment/EnvironmentTypes';
 
 export class Game {
   // Systems
@@ -29,6 +31,7 @@ export class Game {
   private trackManager!: TrackManager;
   private track!: Track;
   private trackDebugRenderer!: TrackDebugRenderer;
+  private environmentManager!: EnvironmentManager;
   private vehicle!: Vehicle;
   private vehiclePhysics!: VehiclePhysics;
   private vehicleController!: VehicleController;
@@ -74,6 +77,18 @@ export class Game {
     this.trackDebugRenderer = new TrackDebugRenderer(this.track);
     this.sceneManager.add(this.trackDebugRenderer.group);
 
+    // 3b. Environment Manager (Vegetation, Props, Distant Scenery, Biomes)
+    const initialBiome = this.track.definition.environmentPreset === 'desert' ? BiomeType.DESERT_CANYON :
+                         this.track.definition.environmentPreset === 'coastal' ? BiomeType.COASTAL :
+                         BiomeType.ALPINE_FOREST;
+    this.environmentManager = new EnvironmentManager(
+      this.track.sampler,
+      this.track.terrain,
+      initialBiome,
+      this.track.definition.seed
+    );
+    this.sceneManager.add(this.environmentManager.group);
+
     // 4. Vehicle & Physics Setup
     this.vehiclePhysics = new VehiclePhysics();
     this.vehiclePhysics.setSpawn(this.track.spawnPosition, this.track.spawnHeading);
@@ -106,6 +121,9 @@ export class Game {
       },
       onTrackChanged: (trackId) => {
         this.switchTrack(trackId);
+      },
+      onQualityChanged: (scale) => {
+        this.environmentManager.setLODScale(scale);
       },
       onClosed: () => {
         canvas.focus();
@@ -205,6 +223,9 @@ export class Game {
     // 4. Update Shadow Camera Target
     this.sceneManager.updateLightTarget(this.vehiclePhysics.position);
 
+    // 4b. Update Environment LOD & Distance Culling
+    this.environmentManager.update(this.vehiclePhysics.position);
+
     // 5. Update HUD Telemetry
     this.hud.update(this.gameState, this.vehiclePhysics);
 
@@ -222,8 +243,13 @@ export class Game {
       this.trackDebugRenderer.toggle();
     }
 
-    // 7. Update Performance & Vehicle Telemetry
-    this.perfMonitor.update(dt, this.renderer.instance, this.vehiclePhysics.telemetry);
+    // 7. Update Performance, Environment & Vehicle Telemetry
+    this.perfMonitor.update(
+      dt,
+      this.renderer.instance,
+      this.vehiclePhysics.telemetry,
+      this.environmentManager.getMetrics()
+    );
 
     // 8. Render Frame
     this.renderer.render(this.sceneManager.scene, this.cameraManager.camera);
@@ -233,9 +259,11 @@ export class Game {
    * Dynamically switch circuit preset, regenerate terrain/road, and respawn car.
    */
   private switchTrack(trackId: string): void {
-    // Remove old track & debug renderer from scene
+    // Remove old track, debug renderer & environment from scene
     this.sceneManager.scene.remove(this.track.group);
     this.sceneManager.scene.remove(this.trackDebugRenderer.group);
+    this.sceneManager.scene.remove(this.environmentManager.group);
+    this.environmentManager.dispose();
 
     // Load new track
     this.track = this.trackManager.loadTrack(trackId);
@@ -245,6 +273,18 @@ export class Game {
     this.trackDebugRenderer.dispose();
     this.trackDebugRenderer = new TrackDebugRenderer(this.track);
     this.sceneManager.add(this.trackDebugRenderer.group);
+
+    // Recreate environment manager for new track
+    const newBiome = this.track.definition.environmentPreset === 'desert' ? BiomeType.DESERT_CANYON :
+                     this.track.definition.environmentPreset === 'coastal' ? BiomeType.COASTAL :
+                     BiomeType.ALPINE_FOREST;
+    this.environmentManager = new EnvironmentManager(
+      this.track.sampler,
+      this.track.terrain,
+      newBiome,
+      this.track.definition.seed
+    );
+    this.sceneManager.add(this.environmentManager.group);
 
     // Update PhysicsWorld with new track
     this.physicsWorld.setTrack(this.track);
@@ -275,6 +315,10 @@ export class Game {
    * Aligns orientation along track tangent, zeroes velocity, and realigns camera.
    */
   private resetVehicle(): void {
+    if (this.gameState.state === RaceState.FINISHED) {
+      this.gameState.reset();
+    }
+
     let spawnPos = this.track.spawnPosition;
     let spawnHeading = this.track.spawnHeading;
 
@@ -285,10 +329,6 @@ export class Game {
       spawnHeading = Math.atan2(cp.tangent.x, cp.tangent.z);
     } else {
       // At starting line: reset race state & countdown
-      this.gameState.reset();
-    }
-
-    if (this.gameState.state === RaceState.FINISHED) {
       this.gameState.reset();
     }
 
@@ -307,6 +347,7 @@ export class Game {
     this.gameLoop.stop();
     this.inputManager.destroy();
     this.renderer.destroy();
+    this.environmentManager.dispose();
     this.assetManager.dispose();
   }
 }

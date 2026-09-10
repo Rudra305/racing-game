@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { VehicleTelemetry } from '../physics/VehiclePhysics';
+import { EnvironmentMetrics } from '../environment/EnvironmentManager';
 
 export class PerformanceMonitor {
   private containerEl: HTMLElement | null;
@@ -25,6 +26,13 @@ export class PerformanceMonitor {
   private distanceEl: HTMLElement | null;
   private gradientEl: HTMLElement | null;
   private bankingEl: HTMLElement | null;
+
+  // Environment & LOD telemetry elements
+  private chunksEl: HTMLElement | null;
+  private instancesEl: HTMLElement | null;
+  private lod0El: HTMLElement | null;
+  private lod1El: HTMLElement | null;
+  private lod2El: HTMLElement | null;
 
   private isVisible: boolean = false;
   private frameCount: number = 0;
@@ -55,6 +63,12 @@ export class PerformanceMonitor {
     this.gradientEl = document.getElementById('perf-gradient');
     this.bankingEl = document.getElementById('perf-banking');
 
+    this.chunksEl = document.getElementById('perf-chunks');
+    this.instancesEl = document.getElementById('perf-instances');
+    this.lod0El = document.getElementById('perf-lod0');
+    this.lod1El = document.getElementById('perf-lod1');
+    this.lod2El = document.getElementById('perf-lod2');
+
     const toggleBtn = document.getElementById('btn-toggle-perf');
     if (toggleBtn) {
       toggleBtn.addEventListener('click', (e) => {
@@ -72,7 +86,12 @@ export class PerformanceMonitor {
     return this.isVisible;
   }
 
-  public update(delta: number, renderer: THREE.WebGLRenderer, telemetry?: VehicleTelemetry): void {
+  public update(
+    delta: number,
+    renderer: THREE.WebGLRenderer,
+    telemetry?: VehicleTelemetry,
+    envMetrics?: EnvironmentMetrics
+  ): void {
     if (!this.isVisible) return;
 
     this.frameCount++;
@@ -110,6 +129,15 @@ export class PerformanceMonitor {
         if (this.distanceEl) this.distanceEl.textContent = telemetry.trackDistance.toFixed(0);
         if (this.gradientEl) this.gradientEl.textContent = telemetry.gradient.toFixed(1);
         if (this.bankingEl) this.bankingEl.textContent = telemetry.banking.toFixed(1);
+      }
+
+      // Environment & LOD metrics
+      if (envMetrics) {
+        if (this.chunksEl) this.chunksEl.textContent = `${envMetrics.visibleChunks}/${envMetrics.totalChunks}`;
+        if (this.instancesEl) this.instancesEl.textContent = envMetrics.totalInstances.toLocaleString();
+        if (this.lod0El) this.lod0El.textContent = envMetrics.lod0Count.toString();
+        if (this.lod1El) this.lod1El.textContent = envMetrics.lod1Count.toString();
+        if (this.lod2El) this.lod2El.textContent = envMetrics.lod2Count.toString();
       }
     }
   }

@@ -4,6 +4,7 @@ import { VEHICLE_PRESETS, VehicleConfig } from '../vehicles/VehicleConfig';
 export interface SettingsModalCallbacks {
   onVehiclePresetChanged: (config: VehicleConfig) => void;
   onTrackChanged: (trackId: string) => void;
+  onQualityChanged?: (scale: number) => void;
   onClosed: () => void;
 }
 
@@ -15,6 +16,7 @@ export class SettingsModal {
 
   // DOM Inputs
   private trackPresetSelect!: HTMLSelectElement;
+  private graphicsQualitySelect!: HTMLSelectElement;
   private sensitivitySlider!: HTMLInputElement;
   private sensitivityVal!: HTMLElement;
   private returnSpeedSlider!: HTMLInputElement;
@@ -77,6 +79,17 @@ export class SettingsModal {
             <option value="alpine-circuit">Alpine Test Circuit (42m Elevation, Banked Hairpin)</option>
             <option value="coastal-speedway">Coastal Speedway (High-Speed Sweepers, Ocean Plains)</option>
             <option value="grand-prix">Grand Prix Technical (Technical Chicanes, Rolling Hills)</option>
+          </select>
+        </div>
+
+        <!-- Graphics & Environment Quality -->
+        <div style="margin-bottom: 20px;">
+          <label style="display: block; font-size: 11px; font-weight: 700; color: #8b949e; text-transform: uppercase; margin-bottom: 8px; letter-spacing: 0.08em;">Environment Quality (LOD & Draw Distance)</label>
+          <select id="setting-graphics-preset" style="width: 100%; background: #161d27; border: 1px solid rgba(255,255,255,0.15); color: #fff; padding: 8px 12px; border-radius: 6px; font-size: 13px; font-family: monospace; cursor: pointer;">
+            <option value="1.0" selected>High (Recommended — Balanced 60 FPS)</option>
+            <option value="0.75">Low (Entry GPU / Increased Performance)</option>
+            <option value="0.88">Medium (Mid-Range Hardware)</option>
+            <option value="1.25">Ultra (Extended Range & High Density)</option>
           </select>
         </div>
 
@@ -152,6 +165,7 @@ export class SettingsModal {
 
     // Cache elements
     this.trackPresetSelect = container.querySelector('#setting-track-preset') as HTMLSelectElement;
+    this.graphicsQualitySelect = container.querySelector('#setting-graphics-preset') as HTMLSelectElement;
     this.sensitivitySlider = container.querySelector('#setting-sensitivity') as HTMLInputElement;
     this.sensitivityVal = container.querySelector('#val-sensitivity') as HTMLElement;
     this.returnSpeedSlider = container.querySelector('#setting-return-speed') as HTMLInputElement;
@@ -171,6 +185,11 @@ export class SettingsModal {
     this.trackPresetSelect.addEventListener('change', () => {
       const trackId = this.trackPresetSelect.value;
       this.callbacks.onTrackChanged(trackId);
+    });
+
+    this.graphicsQualitySelect.addEventListener('change', () => {
+      const scale = parseFloat(this.graphicsQualitySelect.value);
+      this.callbacks.onQualityChanged?.(scale);
     });
 
     this.sensitivitySlider.addEventListener('input', () => {

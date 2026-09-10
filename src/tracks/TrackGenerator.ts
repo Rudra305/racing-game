@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { TrackDefinition } from './TrackTypes';
 import { TrackSampler, TrackSample } from './TrackSampler';
 import { TrackBoundary } from './TrackBoundary';
+import { RoadTextureGenerator } from '../rendering/RoadTextureGenerator';
 
 export interface GeneratedTrackMeshes {
   roadMesh: THREE.Mesh;
@@ -66,7 +67,7 @@ export class TrackGenerator {
       roadNormals.push(up.x, up.y, up.z);
       roadNormals.push(up.x, up.y, up.z);
 
-      const uvV = (s.distance / sampler.totalLength) * 45.0;
+      const uvV = s.distance / 6.0;
       roadUvs.push(0, uvV);
       roadUvs.push(1, uvV);
 
@@ -179,9 +180,9 @@ export class TrackGenerator {
     roadGeo.setIndex(roadIndices);
 
     const roadMat = new THREE.MeshStandardMaterial({
-      color: 0x1a1e24,
-      roughness: 0.82,
-      metalness: 0.12,
+      map: RoadTextureGenerator.getAsphaltTexture(),
+      roughness: 0.88,
+      metalness: 0.08,
       side: THREE.DoubleSide
     });
     const roadMesh = new THREE.Mesh(roadGeo, roadMat);

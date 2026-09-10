@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { TerrainDefinition } from '../tracks/TrackTypes';
 import { TrackSampler } from '../tracks/TrackSampler';
-import { SurfaceType, SURFACE_PROPERTIES } from './TerrainSurface';
+import { SurfaceType } from './TerrainSurface';
 
 /**
  * Deterministic Pseudo-Random Seeded Noise Generator
@@ -165,10 +165,12 @@ export class TerrainGenerator {
     const indices: number[] = [];
 
     // Pre-allocated color scratch
-    const colAsphalt = new THREE.Color(SURFACE_PROPERTIES[SurfaceType.ASPHALT].colorHex);
-    const colDirt = new THREE.Color(SURFACE_PROPERTIES[SurfaceType.DIRT].colorHex);
-    const colGrass = new THREE.Color(SURFACE_PROPERTIES[SurfaceType.GRASS].colorHex);
-    const colRock = new THREE.Color(0x4a4f56); // Mountain peak rock tint
+    const colAsphalt = new THREE.Color(0x1a1e24);
+    const colShoulder = new THREE.Color(0x524332); // Gravel shoulder
+    const colGrassLow = new THREE.Color(0x385c28); // Lowland alpine meadow
+    const colGrassHigh = new THREE.Color(0x4a7336); // Sunlit hillside grass
+    const colRock = new THREE.Color(0x5c626d); // Exposed granite rock
+    const colSnow = new THREE.Color(0xdce5ed); // Mountain summit snow/frost
 
     let pIdx = 0;
     let cIdx = 0;
@@ -185,21 +187,37 @@ export class TerrainGenerator {
         positions[pIdx + 2] = z;
         pIdx += 3;
 
-        // Vertex Color Blending
-        let vertColor = colGrass;
+        // Rich Multi-surface Vertex Color Blending
+        const vertColor = new THREE.Color();
+        const noiseVariation = (Math.sin(x * 0.05) * Math.cos(z * 0.05)) * 0.06;
+
         if (info.surface === SurfaceType.ASPHALT) {
-          vertColor = colAsphalt;
+          vertColor.copy(colAsphalt);
         } else if (info.surface === SurfaceType.DIRT || info.surface === SurfaceType.KERB) {
-          vertColor = colDirt;
+          vertColor.copy(colShoulder);
         } else {
-          // On high elevation peaks, tint toward rugged rock
+          // Height ratio across mountain elevation profile
           const heightRatio = Math.max(0, Math.min(1, (info.height - def.baseHeight) / def.heightScale));
-          if (heightRatio > 0.72) {
-            vertColor = colRock;
+          if (heightRatio > 0.88) {
+            // Summit snow / granite frost
+            vertColor.copy(colSnow);
+          } else if (heightRatio > 0.65) {
+            // High altitude granite rock face
+            vertColor.copy(colRock);
+          } else if (heightRatio > 0.35) {
+            // Hillside grass with rock transition
+            const t = (heightRatio - 0.35) / 0.30;
+            vertColor.copy(colGrassHigh).lerp(colRock, t);
           } else {
-            vertColor = colGrass;
+            // Lush alpine meadow valley
+            vertColor.copy(colGrassLow).lerp(colGrassHigh, heightRatio / 0.35);
           }
         }
+
+        // Apply organic micro-tonal variation
+        vertColor.r = Math.max(0, Math.min(1, vertColor.r + noiseVariation));
+        vertColor.g = Math.max(0, Math.min(1, vertColor.g + noiseVariation));
+        vertColor.b = Math.max(0, Math.min(1, vertColor.b + noiseVariation));
 
         colors[cIdx] = vertColor.r;
         colors[cIdx + 1] = vertColor.g;

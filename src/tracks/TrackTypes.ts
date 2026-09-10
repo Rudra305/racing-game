@@ -47,6 +47,7 @@ export interface TrackDefinition {
   roadWidth: number;
   laps: number;
   seed: number;
+  environmentPreset?: 'alpine' | 'coastal' | 'desert';
   spline: TrackSplineDefinition;
   terrain: TerrainDefinition;
   boundaries: TrackBoundaryDefinition[];

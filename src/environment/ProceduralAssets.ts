@@ -1,0 +1,504 @@
+import * as THREE from 'three';
+
+/**
+ * High-performance procedural parametric 3D models with discrete LOD levels.
+ * Built for zero runtime allocations and maximum instancing efficiency.
+ */
+export class ProceduralAssets {
+  // Shared materials for memory efficiency
+  public static trunkMaterial = new THREE.MeshStandardMaterial({
+    color: 0x422a1d, // Alpine bark brown
+    roughness: 0.9,
+    metalness: 0.05
+  });
+
+  public static birchTrunkMaterial = new THREE.MeshStandardMaterial({
+    color: 0xd8d4cb, // Silver birch pale bark
+    roughness: 0.75,
+    metalness: 0.05
+  });
+
+  public static foliageFirMaterial = new THREE.MeshStandardMaterial({
+    color: 0x1c3b24, // Deep alpine pine evergreen
+    roughness: 0.85,
+    metalness: 0.02,
+    side: THREE.DoubleSide
+  });
+
+  public static foliagePineMaterial = new THREE.MeshStandardMaterial({
+    color: 0x274a2e, // Scots pine olive green
+    roughness: 0.85,
+    metalness: 0.02,
+    side: THREE.DoubleSide
+  });
+
+  public static foliageBirchMaterial = new THREE.MeshStandardMaterial({
+    color: 0x4a7c36, // Alpine deciduous bright green
+    roughness: 0.8,
+    metalness: 0.02,
+    side: THREE.DoubleSide
+  });
+
+  public static bushMaterial = new THREE.MeshStandardMaterial({
+    color: 0x2e5234, // Undergrowth shrub
+    roughness: 0.85,
+    metalness: 0.02
+  });
+
+  public static grassMaterial = new THREE.MeshStandardMaterial({
+    color: 0x567d38, // High mountain meadow grass
+    roughness: 0.9,
+    metalness: 0.0,
+    side: THREE.DoubleSide
+  });
+
+  public static rockMaterial = new THREE.MeshStandardMaterial({
+    color: 0x6e737c, // Alpine granite
+    roughness: 0.92,
+    metalness: 0.12,
+    flatShading: true
+  });
+
+  public static steelMaterial = new THREE.MeshStandardMaterial({
+    color: 0xadb5bd, // Galvanized zinc steel
+    roughness: 0.45,
+    metalness: 0.8
+  });
+
+  public static woodMaterial = new THREE.MeshStandardMaterial({
+    color: 0x5c4033, // Treated timber post
+    roughness: 0.85,
+    metalness: 0.05
+  });
+
+  /**
+   * 1. Alpine Fir Tree (LOD 0, 1, 2)
+   */
+  public static createFirGeometry(lod: 0 | 1 | 2): THREE.BufferGeometry {
+    if (lod === 2) {
+      // LOD 2: Fast cross-quad billboard (2 planes intersecting at 90 degrees)
+      const w = 3.2;
+      const h = 8.5;
+      const geo1 = new THREE.PlaneGeometry(w, h);
+      geo1.translate(0, h * 0.5, 0);
+      const geo2 = new THREE.PlaneGeometry(w, h);
+      geo2.rotateY(Math.PI / 2);
+      geo2.translate(0, h * 0.5, 0);
+
+      // Merge into a single BufferGeometry
+      return this.mergeGeometries([geo1, geo2]);
+    }
+
+    if (lod === 1) {
+      // LOD 1: Low-poly conical tiers + 5-sided trunk
+      const parts: THREE.BufferGeometry[] = [];
+      const trunk = new THREE.CylinderGeometry(0.2, 0.35, 4.0, 5);
+      trunk.translate(0, 2.0, 0);
+      parts.push(trunk);
+
+      const tiers = [
+        { r: 2.2, h: 3.2, y: 3.2 },
+        { r: 1.7, h: 3.0, y: 5.2 },
+        { r: 1.1, h: 2.8, y: 7.0 }
+      ];
+
+      for (const t of tiers) {
+        const cone = new THREE.ConeGeometry(t.r, t.h, 5);
+        cone.translate(0, t.y + t.h * 0.5, 0);
+        parts.push(cone);
+      }
+
+      return this.mergeGeometries(parts);
+    }
+
+    // LOD 0: High-detail multi-tiered alpine fir with layered canopy boughs
+    const parts: THREE.BufferGeometry[] = [];
+    const trunk = new THREE.CylinderGeometry(0.22, 0.4, 5.0, 7);
+    trunk.translate(0, 2.5, 0);
+    parts.push(trunk);
+
+    const tiers = [
+      { r: 2.5, h: 3.4, y: 2.4, segs: 8 },
+      { r: 2.1, h: 3.2, y: 4.2, segs: 8 },
+      { r: 1.6, h: 3.0, y: 5.8, segs: 7 },
+      { r: 1.1, h: 2.6, y: 7.2, segs: 6 }
+    ];
+
+    for (const t of tiers) {
+      const cone = new THREE.ConeGeometry(t.r, t.h, t.segs);
+      // Displace vertices subtly to create natural irregular pine branch drape
+      const pos = cone.attributes.position;
+      for (let i = 0; i < pos.count; i++) {
+        const py = pos.getY(i);
+        if (py < 0) {
+          const px = pos.getX(i);
+          const pz = pos.getZ(i);
+          const angle = Math.atan2(pz, px);
+          const wobble = Math.sin(angle * 4) * 0.18;
+          pos.setX(i, px * (1 + wobble));
+          pos.setZ(i, pz * (1 + wobble));
+        }
+      }
+      cone.computeVertexNormals();
+      cone.translate(0, t.y + t.h * 0.5, 0);
+      parts.push(cone);
+    }
+
+    return this.mergeGeometries(parts);
+  }
+
+  /**
+   * 2. Scots Mountain Pine (Layered umbrella pads)
+   */
+  public static createPineGeometry(lod: 0 | 1 | 2): THREE.BufferGeometry {
+    if (lod === 2) {
+      const w = 4.2;
+      const h = 7.5;
+      const g1 = new THREE.PlaneGeometry(w, h);
+      g1.translate(0, h * 0.5, 0);
+      const g2 = new THREE.PlaneGeometry(w, h);
+      g2.rotateY(Math.PI / 2);
+      g2.translate(0, h * 0.5, 0);
+      return this.mergeGeometries([g1, g2]);
+    }
+
+    const segs = lod === 1 ? 5 : 7;
+    const parts: THREE.BufferGeometry[] = [];
+
+    // Gnarled angled trunk
+    const trunkLow = new THREE.CylinderGeometry(0.28, 0.42, 3.8, segs);
+    trunkLow.translate(0, 1.9, 0);
+    parts.push(trunkLow);
+
+    // Foliage pads
+    const pads = [
+      { rx: -0.7, rz: 0.5, y: 4.2, r: 1.6, h: 0.9 },
+      { rx: 0.8, rz: -0.4, y: 5.4, r: 1.8, h: 1.0 },
+      { rx: 0.1, rz: 0.2, y: 6.8, r: 2.1, h: 1.1 }
+    ];
+
+    for (const p of pads) {
+      const pad = new THREE.CylinderGeometry(p.r * 0.8, p.r, p.h, segs);
+      pad.translate(p.rx, p.y + p.h * 0.5, p.rz);
+      parts.push(pad);
+    }
+
+    return this.mergeGeometries(parts);
+  }
+
+  /**
+   * 3. Mountain Birch (Slender pale trunk with rounded crown)
+   */
+  public static createBirchGeometry(lod: 0 | 1 | 2): THREE.BufferGeometry {
+    if (lod === 2) {
+      const w = 3.5;
+      const h = 7.0;
+      const g1 = new THREE.PlaneGeometry(w, h);
+      g1.translate(0, h * 0.5, 0);
+      const g2 = new THREE.PlaneGeometry(w, h);
+      g2.rotateY(Math.PI / 2);
+      g2.translate(0, h * 0.5, 0);
+      return this.mergeGeometries([g1, g2]);
+    }
+
+    const segs = lod === 1 ? 5 : 7;
+    const parts: THREE.BufferGeometry[] = [];
+
+    const trunk = new THREE.CylinderGeometry(0.14, 0.25, 4.5, segs);
+    trunk.translate(0, 2.25, 0);
+    parts.push(trunk);
+
+    const crown = new THREE.DodecahedronGeometry(1.9, lod === 1 ? 0 : 1);
+    crown.scale(1.0, 1.35, 1.0);
+    crown.translate(0, 5.2, 0);
+    parts.push(crown);
+
+    return this.mergeGeometries(parts);
+  }
+
+  /**
+   * 4. Alpine Shrub / Bush (Dense rounded cluster)
+   */
+  public static createBushGeometry(lod: 0 | 1): THREE.BufferGeometry {
+    const parts: THREE.BufferGeometry[] = [];
+    const count = lod === 0 ? 3 : 2;
+
+    const clusters = [
+      { x: 0, y: 0.5, z: 0, r: 0.8 },
+      { x: 0.4, y: 0.4, z: 0.3, r: 0.65 },
+      { x: -0.3, y: 0.35, z: -0.2, r: 0.6 }
+    ];
+
+    for (let i = 0; i < count; i++) {
+      const c = clusters[i];
+      const sphere = new THREE.DodecahedronGeometry(c.r, lod === 0 ? 1 : 0);
+      sphere.scale(1.1, 0.75, 1.0);
+      sphere.translate(c.x, c.y, c.z);
+      parts.push(sphere);
+    }
+
+    return this.mergeGeometries(parts);
+  }
+
+  /**
+   * 5. Mountain Fern
+   */
+  public static createFernGeometry(): THREE.BufferGeometry {
+    const parts: THREE.BufferGeometry[] = [];
+    for (let i = 0; i < 6; i++) {
+      const angle = (i / 6) * Math.PI * 2;
+      const frond = new THREE.PlaneGeometry(0.45, 1.1);
+      frond.rotateX(Math.PI / 3);
+      frond.rotateY(angle);
+      frond.translate(Math.sin(angle) * 0.3, 0.35, Math.cos(angle) * 0.3);
+      parts.push(frond);
+    }
+    return this.mergeGeometries(parts);
+  }
+
+  /**
+   * 6. Alpine Grass Tufts
+   */
+  public static createGrassGeometry(): THREE.BufferGeometry {
+    const parts: THREE.BufferGeometry[] = [];
+    const blades = [0, Math.PI / 3, (Math.PI * 2) / 3];
+    for (const a of blades) {
+      const plane = new THREE.PlaneGeometry(0.9, 0.65);
+      plane.rotateY(a);
+      plane.translate(0, 0.32, 0);
+      parts.push(plane);
+    }
+    return this.mergeGeometries(parts);
+  }
+
+  /**
+   * 7. Granite Boulders (Faceted sharp mountain rock)
+   */
+  public static createRockGeometry(variant: number = 0): THREE.BufferGeometry {
+    const seed = variant === 0 ? 0.95 : 1.35;
+    const geo = new THREE.DodecahedronGeometry(seed, 1);
+    const pos = geo.attributes.position;
+
+    // Displace vertices deterministically for sharp natural cleavage
+    for (let i = 0; i < pos.count; i++) {
+      const vx = pos.getX(i);
+      const vy = pos.getY(i);
+      const vz = pos.getZ(i);
+      const dist = Math.sqrt(vx * vx + vy * vy + vz * vz);
+      const scale = 1.0 + Math.sin(vx * 3.5 + vy * 2.1) * 0.22 + Math.cos(vz * 2.8) * 0.15;
+      pos.setXYZ(i, (vx / dist) * seed * scale, (vy / dist) * (seed * 0.75) * scale, (vz / dist) * seed * scale);
+    }
+
+    geo.computeVertexNormals();
+    geo.translate(0, seed * 0.5, 0);
+    return geo;
+  }
+
+  /**
+   * 8. Roadside Guardrail Unit Segment (3 meters long W-beam)
+   */
+  public static createGuardrailSegmentGeometry(length: number = 3.0): THREE.BufferGeometry {
+    const parts: THREE.BufferGeometry[] = [];
+
+    // 1. Galvanized W-beam rail (profile extruded or box with corrugated indentation)
+    const rail = new THREE.BoxGeometry(length, 0.35, 0.08);
+    rail.translate(0, 0.72, 0);
+    parts.push(rail);
+
+    // 2. Wooden support post at center
+    const post = new THREE.BoxGeometry(0.12, 0.95, 0.12);
+    post.translate(0, 0.47, -0.06);
+    parts.push(post);
+
+    return this.mergeGeometries(parts);
+  }
+
+  /**
+   * 9. Directional Chevron Sign (Hairpin Curve Indicator)
+   */
+  public static createChevronSignGeometry(isRight: boolean = true): THREE.BufferGeometry {
+    const parts: THREE.BufferGeometry[] = [];
+
+    // Dual steel posts
+    const postLeft = new THREE.CylinderGeometry(0.04, 0.04, 1.8, 6);
+    postLeft.translate(-0.55, 0.9, 0);
+    parts.push(postLeft);
+
+    const postRight = new THREE.CylinderGeometry(0.04, 0.04, 1.8, 6);
+    postRight.translate(0.55, 0.9, 0);
+    parts.push(postRight);
+
+    // Sign plate (1.4m wide x 0.8m high)
+    const plate = new THREE.BoxGeometry(1.4, 0.8, 0.04);
+    plate.translate(0, 1.35, 0.03);
+    parts.push(plate);
+
+    // Arrow chevron mesh relief
+    const arrow = new THREE.ConeGeometry(0.28, 0.5, 3);
+    arrow.rotateZ(isRight ? -Math.PI / 2 : Math.PI / 2);
+    arrow.translate(0, 1.35, 0.06);
+    parts.push(arrow);
+
+    return this.mergeGeometries(parts);
+  }
+
+  /**
+   * 10. Speed Limit Sign (Circular highway sign)
+   */
+  public static createSpeedSignGeometry(): THREE.BufferGeometry {
+    const parts: THREE.BufferGeometry[] = [];
+
+    // Post
+    const post = new THREE.CylinderGeometry(0.04, 0.04, 2.2, 6);
+    post.translate(0, 1.1, 0);
+    parts.push(post);
+
+    // Circular plate
+    const plate = new THREE.CylinderGeometry(0.42, 0.42, 0.03, 16);
+    plate.rotateX(Math.PI / 2);
+    plate.translate(0, 1.8, 0.02);
+    parts.push(plate);
+
+    return this.mergeGeometries(parts);
+  }
+
+  /**
+   * 11. Road Reflector Bollard (Post with retro-reflective bands)
+   */
+  public static createReflectorPostGeometry(): THREE.BufferGeometry {
+    const parts: THREE.BufferGeometry[] = [];
+
+    // Body (slanted top)
+    const body = new THREE.CylinderGeometry(0.05, 0.06, 0.95, 8);
+    body.translate(0, 0.47, 0);
+    parts.push(body);
+
+    // Reflector stud
+    const stud = new THREE.BoxGeometry(0.08, 0.12, 0.04);
+    stud.translate(0, 0.78, 0.04);
+    parts.push(stud);
+
+    return this.mergeGeometries(parts);
+  }
+
+  /**
+   * 12. Alpine Observation Lookout Tower (Landmark)
+   */
+  public static createLookoutTowerGeometry(): THREE.BufferGeometry {
+    const parts: THREE.BufferGeometry[] = [];
+
+    // 4 Corner timber stilts
+    const legH = 9.0;
+    const spread = 2.4;
+    const legCoords = [
+      [-spread, -spread],
+      [spread, -spread],
+      [-spread, spread],
+      [spread, spread]
+    ];
+
+    for (const [lx, lz] of legCoords) {
+      const leg = new THREE.CylinderGeometry(0.18, 0.25, legH, 6);
+      leg.translate(lx, legH * 0.5, lz);
+      parts.push(leg);
+    }
+
+    // Platform cabin
+    const cabin = new THREE.BoxGeometry(spread * 2.5, 2.8, spread * 2.5);
+    cabin.translate(0, legH + 1.4, 0);
+    parts.push(cabin);
+
+    // Gabled roof
+    const roof = new THREE.ConeGeometry(spread * 2.2, 1.8, 4);
+    roof.rotateY(Math.PI / 4);
+    roof.translate(0, legH + 2.8 + 0.9, 0);
+    parts.push(roof);
+
+    return this.mergeGeometries(parts);
+  }
+
+  /**
+   * 13. Summit Weather Station Mast (Landmark)
+   */
+  public static createSummitMastGeometry(): THREE.BufferGeometry {
+    const parts: THREE.BufferGeometry[] = [];
+
+    // Lattice radio mast
+    const mast = new THREE.CylinderGeometry(0.08, 0.35, 14.0, 4);
+    mast.translate(0, 7.0, 0);
+    parts.push(mast);
+
+    // Top sphere / antenna dome
+    const dome = new THREE.SphereGeometry(0.75, 8, 8);
+    dome.translate(0, 14.2, 0);
+    parts.push(dome);
+
+    return this.mergeGeometries(parts);
+  }
+
+  /**
+   * High-efficiency BufferGeometry merger without external dependencies.
+   */
+  private static mergeGeometries(geometries: THREE.BufferGeometry[]): THREE.BufferGeometry {
+    let totalVertices = 0;
+    let totalIndices = 0;
+
+    for (const g of geometries) {
+      const pos = g.attributes.position;
+      totalVertices += pos.count;
+      if (g.index) {
+        totalIndices += g.index.count;
+      } else {
+        totalIndices += pos.count;
+      }
+    }
+
+    const outPositions = new Float32Array(totalVertices * 3);
+    const outNormals = new Float32Array(totalVertices * 3);
+    const outIndices = new Uint32Array(totalIndices);
+
+    let vOffset = 0;
+    let iOffset = 0;
+    let vertexCountSoFar = 0;
+
+    for (const g of geometries) {
+      const pos = g.attributes.position;
+      const norm = g.attributes.normal;
+      const count = pos.count;
+
+      for (let i = 0; i < count * 3; i++) {
+        outPositions[vOffset + i] = pos.array[i];
+        outNormals[vOffset + i] = norm ? norm.array[i] : 0;
+      }
+
+      if (g.index) {
+        for (let i = 0; i < g.index.count; i++) {
+          outIndices[iOffset + i] = g.index.array[i] + vertexCountSoFar;
+        }
+        iOffset += g.index.count;
+      } else {
+        for (let i = 0; i < count; i++) {
+          outIndices[iOffset + i] = i + vertexCountSoFar;
+        }
+        iOffset += count;
+      }
+
+      vOffset += count * 3;
+      vertexCountSoFar += count;
+    }
+
+    const merged = new THREE.BufferGeometry();
+    merged.setAttribute('position', new THREE.BufferAttribute(outPositions, 3));
+    merged.setAttribute('normal', new THREE.BufferAttribute(outNormals, 3));
+    merged.setIndex(new THREE.BufferAttribute(outIndices, 1));
+    merged.computeBoundingSphere();
+    merged.computeBoundingBox();
+
+    // Clean up sub-geometries
+    for (const g of geometries) {
+      g.dispose();
+    }
+
+    return merged;
+  }
+}

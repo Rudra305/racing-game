@@ -13,6 +13,7 @@ export const ALPINE_CIRCUIT_CONFIG: TrackDefinition = {
   roadWidth: 13.0,
   laps: 3,
   seed: 12345,
+  environmentPreset: 'alpine',
   spline: {
     points: [
       { position: [0, 0, 0], width: 14.0, banking: 0 },             // Start/Finish straight
@@ -70,6 +71,7 @@ export const COASTAL_SPEEDWAY_CONFIG: TrackDefinition = {
   roadWidth: 16.0,
   laps: 3,
   seed: 67890,
+  environmentPreset: 'coastal',
   spline: {
     points: [
       { position: [0, 0, 0], width: 16.0, banking: 0 },
@@ -123,6 +125,7 @@ export const GP_TECHNICAL_CONFIG: TrackDefinition = {
   roadWidth: 12.5,
   laps: 3,
   seed: 54321,
+  environmentPreset: 'alpine',
   spline: {
     points: [
       { position: [0, 0, 0], width: 14.0, banking: 0 },
