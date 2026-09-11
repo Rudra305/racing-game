@@ -26,6 +26,12 @@ export class CheckpointManager {
     this.visitedIndices.clear();
   }
 
+  public setCheckpoints(checkpoints: Checkpoint[]): void {
+    this.checkpoints = checkpoints;
+    this.totalCheckpoints = checkpoints.length;
+    this.reset();
+  }
+
   public get nextCheckpoint(): number {
     return (this.currentCheckpoint + 1) % this.totalCheckpoints;
   }

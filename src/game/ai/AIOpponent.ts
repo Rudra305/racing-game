@@ -1,7 +1,8 @@
 import * as THREE from 'three';
 import { Vehicle } from '../../vehicles/Vehicle';
 import { VehiclePhysics } from '../../physics/VehiclePhysics';
-import { VehicleConfig, DEFAULT_VEHICLE_CONFIG } from '../../vehicles/VehicleConfig';
+import { VehicleDefinition } from '../../vehicles/VehicleDefinition';
+import { VehicleRegistry } from '../../vehicles/VehicleRegistry';
 import { AIController } from './AIController';
 import { LapManager } from '../race/LapManager';
 import { CheckpointManager } from '../race/CheckpointManager';
@@ -12,11 +13,13 @@ export interface AIDriverProfile {
   name: string;
   color: number;
   lineOffset: number; // -1.0 (left bias) to +1.0 (right bias)
+  preferredVehicleId?: string;
 }
 
 export class AIOpponent {
   public readonly id: string;
   public readonly name: string;
+  public readonly definition: VehicleDefinition;
   public readonly vehicle: Vehicle;
   public readonly physics: VehiclePhysics;
   public readonly controller: AIController;
@@ -29,16 +32,25 @@ export class AIOpponent {
     profile: AIDriverProfile,
     checkpoints: Checkpoint[],
     totalLaps: number = 3,
-    config: VehicleConfig = DEFAULT_VEHICLE_CONFIG
+    definition?: VehicleDefinition
   ) {
     this.id = profile.id;
     this.name = profile.name;
 
-    // Visual Vehicle with distinct color
-    this.vehicle = new Vehicle(config, profile.color);
+    // Use assigned definition or look up in registry
+    if (definition) {
+      this.definition = definition;
+    } else if (profile.preferredVehicleId) {
+      this.definition = VehicleRegistry.getOrThrow(profile.preferredVehicleId);
+    } else {
+      this.definition = VehicleRegistry.getOrThrow('sports_apex_s1');
+    }
 
-    // Physical Simulation
-    this.physics = new VehiclePhysics(config);
+    // Visual Vehicle with distinct livery color (ultra-lightweight procedural model for AI compute preservation)
+    this.vehicle = new Vehicle(this.definition, profile.color, false);
+
+    // Physical Simulation using the canonical vehicle configuration
+    this.physics = new VehiclePhysics(this.definition.config);
 
     // AI Decision Controller
     this.controller = new AIController(profile.lineOffset);
@@ -61,6 +73,6 @@ export class AIOpponent {
   }
 
   public dispose(): void {
-    // Disposal hook
+    this.vehicle.dispose();
   }
 }

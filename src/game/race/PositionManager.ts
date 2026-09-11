@@ -23,9 +23,43 @@ export class PositionManager {
     this.trackLength = trackLength;
   }
 
+  public setTrackLength(trackLength: number): void {
+    this.trackLength = trackLength;
+  }
+
+  /**
+   * Clears all registered participants.
+   */
+  public clearParticipants(): void {
+    this.participants.clear();
+    this.sortedParticipants = [];
+    this.updateTimer = 0;
+  }
+
+  /**
+   * Clears only AI opponents, preserving the player participant.
+   */
+  public clearAIParticipants(): void {
+    for (const [id, p] of this.participants.entries()) {
+      if (!p.isPlayer) {
+        this.participants.delete(id);
+      }
+    }
+    this.sortedParticipants = this.sortedParticipants.filter((p) => p.isPlayer);
+    for (let i = 0; i < this.sortedParticipants.length; i++) {
+      this.sortedParticipants[i].position = i + 1;
+      this.sortedParticipants[i].totalProgress = -(i + 1);
+    }
+    this.updateTimer = 0;
+  }
+
   public reset(): void {
+    // Re-sync sortedParticipants from the participants map to prevent stale/duplicate entries
+    this.sortedParticipants = Array.from(this.participants.values());
+    this.sortedParticipants.sort((a, b) => (a.isPlayer ? -1 : b.isPlayer ? 1 : 0));
+
     let initialPos = 1;
-    for (const p of this.participants.values()) {
+    for (const p of this.sortedParticipants) {
       p.lap = 1;
       p.checkpoint = 0;
       p.distanceAlongTrack = 0;
@@ -40,7 +74,21 @@ export class PositionManager {
   }
 
   public registerParticipant(id: string, name: string, isPlayer: boolean): void {
-    const initPos = this.participants.size + 1;
+    // If participant already registered, update attributes without appending duplicate to sorted list
+    if (this.participants.has(id)) {
+      const existing = this.participants.get(id)!;
+      existing.name = name;
+      existing.isPlayer = isPlayer;
+      existing.lap = 1;
+      existing.checkpoint = 0;
+      existing.distanceAlongTrack = 0;
+      existing.isFinished = false;
+      existing.finishTime = undefined;
+      existing.finishPosition = undefined;
+      return;
+    }
+
+    const initPos = this.sortedParticipants.length + 1;
     const entry: ParticipantProgress = {
       id,
       name,

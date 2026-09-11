@@ -52,6 +52,13 @@ export class RaceManager {
     this.playerLapManager.totalLaps = this.config.laps;
   }
 
+  public setTrack(track: Track): void {
+    this.playerCheckpointManager.setCheckpoints(track.checkpoints);
+    this.positionManager.setTrackLength(track.sampler.totalLength);
+    this.positionManager.clearAIParticipants();
+    this.reset();
+  }
+
   public update(dt: number): void {
     // 1. Countdown State Machine
     if (this.state === RaceState.COUNTDOWN) {

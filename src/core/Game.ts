@@ -22,6 +22,10 @@ import { RaceManager } from '../game/race/RaceManager';
 import { RaceState } from '../game/race/RaceState';
 import { AISystem } from '../game/ai/AISystem';
 import { AIDifficultyLevel } from '../game/race/RaceConfig';
+import { GarageManager } from '../ui/garage/GarageManager';
+import { VehicleDefinition } from '../vehicles/VehicleDefinition';
+import { VehicleCustomization } from '../vehicles/VehicleCustomization';
+import { VehicleRegistry } from '../vehicles/VehicleRegistry';
 
 export class Game {
   // Systems
@@ -43,6 +47,7 @@ export class Game {
   private hud!: HUD;
   private perfMonitor!: PerformanceMonitor;
   private settingsModal!: SettingsModal;
+  private garageManager!: GarageManager;
   private assetManager!: AssetManager;
   private gameLoop!: GameLoop;
 
@@ -92,12 +97,28 @@ export class Game {
     );
     this.sceneManager.add(this.environmentManager.group);
 
-    // 4. Player Vehicle & Physics Setup (Spawned on Grid Slot 0 / Pole Position)
+    // Initialize VehicleRegistry
+    VehicleRegistry.initialize();
+
+    // Initialize Garage Subsystem (Phase 6)
+    const garageOverlay = document.getElementById('garage-overlay') as HTMLElement;
+    this.garageManager = new GarageManager(garageOverlay, {
+      onStartRace: (def, cust) => {
+        this.applyPlayerVehicle(def, cust);
+        this.restartRace();
+      },
+      onClose: () => {
+        canvas.focus();
+      }
+    });
+
+    // 4. Player Vehicle & Physics Setup (Spawned on Grid Slot 0 with persisted vehicle selection)
     const playerSlot = this.track.startGrid.getPlayerSlot();
-    this.vehiclePhysics = new VehiclePhysics();
+    const savedCar = this.garageManager.getSelectedVehicle();
+    this.vehiclePhysics = new VehiclePhysics(savedCar.definition.config);
     this.vehiclePhysics.setSpawn(playerSlot.position, playerSlot.heading);
 
-    this.vehicle = new Vehicle();
+    this.vehicle = new Vehicle(savedCar.definition, savedCar.customization);
     this.vehicle.syncWithPhysics(this.vehiclePhysics);
     this.sceneManager.add(this.vehicle.group);
 
@@ -162,6 +183,10 @@ export class Game {
       }
     });
 
+    this.hud.onGarageButtonClick(() => {
+      this.openGarage();
+    });
+
     this.hud.onSettingsButtonClick(() => {
       this.settingsModal.toggle();
     });
@@ -192,15 +217,26 @@ export class Game {
 
     // 12. Start Game Loop
     this.gameLoop.start();
+
+    // 13. Open Garage Showroom as First Screen on Game Load
+    this.openGarage();
   }
 
   private onFixedUpdate(dt: number): void {
     // 0. Poll active input states
     this.inputManager.update();
 
-    // 1. Process Settings Modal Toggle (Escape / O)
+    // 1. Process Garage & Settings Modal Toggles
+    if (this.inputManager.consumeToggleGarage()) {
+      this.toggleGarage();
+    }
+
     if (this.inputManager.consumeToggleSettings()) {
-      this.settingsModal.toggle();
+      if (this.garageManager.isOpen) {
+        this.garageManager.close();
+      } else {
+        this.settingsModal.toggle();
+      }
     }
 
     // 2. Process Developer Jump Test (J)
@@ -214,12 +250,11 @@ export class Game {
       this.resetVehicle();
     }
 
-    // 4. Update Controller & AI based on Race State
-    if (this.settingsModal.visible) {
-      // Pause inputs while in settings menu
+    // 4. Update Controller & AI based on Race / UI State
+    if (this.garageManager.isOpen || this.settingsModal.visible) {
+      // Pause inputs while in garage or settings menu
       this.vehicleController.setEnabled(false);
       this.aiSystem.setEnabled(false);
-      this.physicsWorld.step(dt);
       return;
     }
 
@@ -337,7 +372,7 @@ export class Game {
     this.aiSystem.syncVisuals();
 
     this.cameraManager.resetToVehicle(this.vehiclePhysics.position, this.vehiclePhysics.heading);
-    this.hud.hideResults();
+    this.hud.reset();
     this.raceManager.reset();
   }
 
@@ -372,14 +407,17 @@ export class Game {
    * Changes the number of AI opponents on the grid.
    */
   private changeAICount(count: number): void {
-    // Remove current AI from scene and physicsWorld
+    // 1. Remove current AI from scene and physicsWorld
     for (const opp of this.aiSystem.opponents) {
       this.sceneManager.scene.remove(opp.vehicle.group);
     }
     this.physicsWorld.clearAIVehicles();
     this.aiSystem.dispose();
 
-    // Create new AI roster
+    // 2. Clear old AI participants from PositionManager so total and standings are strictly accurate
+    this.raceManager.positionManager.clearAIParticipants();
+
+    // 3. Create new AI roster
     this.raceManager.config.aiCount = count;
     this.aiSystem = new AISystem(this.track, count, this.raceManager.config.difficulty, this.raceManager.config.laps);
     this.aiSystem.spawnOnGrid(this.track.startGrid);
@@ -440,7 +478,10 @@ export class Game {
     this.vehicle.syncWithPhysics(this.vehiclePhysics);
     this.cameraManager.resetToVehicle(this.vehiclePhysics.position, this.vehiclePhysics.heading);
 
-    // 8. Rebuild AI System for new track
+    // 8. Rebind RaceManager to new track & clear stale AI participants
+    this.raceManager.setTrack(this.track);
+
+    // 9. Rebuild AI System for new track
     const aiCount = this.raceManager.config.aiCount;
     this.aiSystem = new AISystem(this.track, aiCount, this.raceManager.config.difficulty, this.raceManager.config.laps);
     this.aiSystem.spawnOnGrid(this.track.startGrid);
@@ -452,9 +493,9 @@ export class Game {
     }
     this.aiSystem.syncVisuals();
 
-    // 9. Reset race state & start countdown
-    this.hud.hideResults();
-    this.raceManager.reset();
+    // 10. Reset race state & start countdown
+    this.hud.reset();
+    this.restartRace();
   }
 
   private onWindowResize(): void {
@@ -470,5 +511,27 @@ export class Game {
     this.environmentManager.dispose();
     this.assetManager.dispose();
     this.aiSystem.dispose();
+    this.garageManager.dispose();
+  }
+
+  public openGarage(): void {
+    if (this.settingsModal.visible) {
+      this.settingsModal.hide();
+    }
+    this.garageManager.open();
+  }
+
+  public toggleGarage(): void {
+    if (this.garageManager.isOpen) {
+      this.garageManager.close();
+    } else {
+      this.openGarage();
+    }
+  }
+
+  public applyPlayerVehicle(def: VehicleDefinition, cust: VehicleCustomization): void {
+    this.vehiclePhysics.setConfig(def.config);
+    this.vehicle.setDefinition(def, cust);
+    this.cameraManager.resetToVehicle(this.vehiclePhysics.position, this.vehiclePhysics.heading);
   }
 }

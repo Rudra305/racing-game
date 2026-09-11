@@ -73,6 +73,16 @@ export class HUD {
     this.restartBtnEl = document.getElementById('btn-restart-race');
   }
 
+  public onGarageButtonClick(callback: () => void): void {
+    const btn = document.getElementById('btn-open-garage');
+    if (btn) {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        callback();
+      });
+    }
+  }
+
   public onSettingsButtonClick(callback: () => void): void {
     const btn = document.getElementById('btn-open-settings');
     if (btn) {
@@ -98,6 +108,18 @@ export class HUD {
       this.resultsOverlayEl.style.display = 'none';
     }
     this.resultsDisplayed = false;
+  }
+
+  public reset(): void {
+    this.hideResults();
+    this.prevPosText = '';
+    this.prevPosStatusText = '';
+    this.prevLapText = '';
+    this.prevLapStatusText = '';
+    this.prevCurrentTimeText = '';
+    this.prevBestTimeText = '';
+    this.prevAnnouncementText = '';
+    this.textUpdateTimer = this.textUpdateInterval;
   }
 
   /**

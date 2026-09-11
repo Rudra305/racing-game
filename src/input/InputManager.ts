@@ -10,6 +10,7 @@ export interface InputActions {
   toggleCheckpointsRequested: boolean;
   toggleTrackDebugRequested: boolean;
   toggleSettingsRequested: boolean;
+  toggleGarageRequested: boolean;
   jumpRequested: boolean;
 }
 
@@ -27,6 +28,7 @@ export class InputManager {
     toggleCheckpointsRequested: false,
     toggleTrackDebugRequested: false,
     toggleSettingsRequested: false,
+    toggleGarageRequested: false,
     jumpRequested: false
   };
 
@@ -92,6 +94,11 @@ export class InputManager {
     if (code === 'Escape' || code === 'KeyO' || key === 'escape' || key === 'o') {
       event.preventDefault();
       this.actions.toggleSettingsRequested = true;
+    }
+    // Garage toggle: G
+    if (code === 'KeyG' || key === 'g') {
+      event.preventDefault();
+      this.actions.toggleGarageRequested = true;
     }
     // Developer Jump test: J
     if (code === 'KeyJ' || key === 'j') {
@@ -184,6 +191,12 @@ export class InputManager {
   public consumeToggleSettings(): boolean {
     const res = this.actions.toggleSettingsRequested;
     this.actions.toggleSettingsRequested = false;
+    return res;
+  }
+
+  public consumeToggleGarage(): boolean {
+    const res = this.actions.toggleGarageRequested;
+    this.actions.toggleGarageRequested = false;
     return res;
   }
 

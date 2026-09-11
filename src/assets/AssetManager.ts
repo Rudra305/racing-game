@@ -1,8 +1,9 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
+import { DRACOLoader } from 'three/examples/jsm/loaders/DRACOLoader.js';
 import { AssetCache } from './AssetCache';
-import { AssetManifest } from './AssetTypes';
-import { ENVIRONMENT_ASSET_MANIFEST } from './AssetManifest';
+import { AssetManifest, GameAssetDefinition } from './AssetTypes';
+import { ENVIRONMENT_ASSET_MANIFEST, POLYFORK_ASSET_MANIFEST } from './AssetManifest';
 import { AssetValidator } from './AssetValidator';
 
 export interface AssetProgressCallback {
@@ -12,13 +13,33 @@ export interface AssetProgressCallback {
 export class AssetManager {
   private cache: AssetCache = new AssetCache();
   private manifest: AssetManifest = ENVIRONMENT_ASSET_MANIFEST;
+  private gameManifest: Map<string, GameAssetDefinition> = new Map();
   private gltfLoader: GLTFLoader;
+  private dracoLoader: DRACOLoader;
   private textureLoader: THREE.TextureLoader;
   private isDisposed: boolean = false;
 
+  private static instance: AssetManager | null = null;
+
+  public static getInstance(): AssetManager {
+    if (!AssetManager.instance) {
+      AssetManager.instance = new AssetManager();
+    }
+    return AssetManager.instance;
+  }
+
   constructor() {
+    AssetManager.instance = this;
     this.gltfLoader = new GLTFLoader();
+    this.dracoLoader = new DRACOLoader();
+    this.dracoLoader.setDecoderPath('/draco/');
+    this.gltfLoader.setDRACOLoader(this.dracoLoader);
     this.textureLoader = new THREE.TextureLoader();
+
+    // Register all definitions from the Polyfork asset manifest
+    for (const def of POLYFORK_ASSET_MANIFEST) {
+      this.gameManifest.set(def.id, def);
+    }
   }
 
   /**
@@ -159,6 +180,82 @@ export class AssetManager {
     }
   }
 
+  public getGameAssetDefinition(id: string): GameAssetDefinition | undefined {
+    return this.gameManifest.get(id);
+  }
+
+  public getGameAssetsByCategory(category: string): GameAssetDefinition[] {
+    const results: GameAssetDefinition[] = [];
+    for (const def of this.gameManifest.values()) {
+      if (def.category === category) {
+        results.push(def);
+      }
+    }
+    return results;
+  }
+
+  /**
+   * Loads a game asset model by manifest ID (Polyfork / external),
+   * returning a cloned Object3D with automatic caching and zero-fail procedural fallback.
+   */
+  public async loadGameAsset(id: string): Promise<THREE.Object3D | null> {
+    if (this.isDisposed) return null;
+
+    const cacheKey = `game_asset_${id}`;
+    if (this.cache.has(cacheKey)) {
+      const cached = this.cache.get<THREE.Object3D>(cacheKey);
+      return cached ? cached.clone() : null;
+    }
+
+    const def = this.gameManifest.get(id);
+    if (!def) {
+      console.warn(`[AssetManager] Unknown GameAsset id: '${id}'`);
+      return null;
+    }
+
+    // 1. Attempt loading canonical GLB format
+    if (def.path) {
+      const model = await this.loadModel(def.path);
+      if (model) {
+        this.cache.set(cacheKey, model, true);
+        return model.clone();
+      }
+    }
+
+    // 2. Fallback to procedural generation if available
+    if (def.proceduralFallback) {
+      const res = def.proceduralFallback();
+      let fallbackObj: THREE.Object3D;
+      if (res instanceof THREE.BufferGeometry) {
+        const mat = new THREE.MeshStandardMaterial({ color: 0x5a7d5a, roughness: 0.8 });
+        fallbackObj = new THREE.Mesh(res, mat);
+      } else {
+        fallbackObj = res;
+      }
+      this.cache.set(cacheKey, fallbackObj, true);
+      return fallbackObj.clone();
+    }
+
+    return null;
+  }
+
+  /**
+   * Preloads all registered Polyfork / Game assets.
+   */
+  public async preloadGameAssets(onProgress?: (progress: number) => void): Promise<void> {
+    const ids = Array.from(this.gameManifest.keys());
+    let completed = 0;
+    const total = ids.length;
+
+    for (const id of ids) {
+      await this.loadGameAsset(id);
+      completed++;
+      if (onProgress) {
+        onProgress(completed / total);
+      }
+    }
+  }
+
   public get<T>(key: string): T | undefined {
     return this.cache.get<T>(key);
   }
@@ -172,6 +269,7 @@ export class AssetManager {
 
   public dispose(): void {
     this.cache.disposeAll();
+    this.dracoLoader.dispose();
     this.isDisposed = true;
   }
 

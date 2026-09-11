@@ -7,6 +7,7 @@ import { Track } from '../../tracks/Track';
 import { StartGrid } from '../../tracks/StartGrid';
 import { NearbyVehicleInfo } from './AICollisionAvoidance';
 import { PositionManager } from '../race/PositionManager';
+import { VehicleRegistry } from '../../vehicles/VehicleRegistry';
 
 const DEFAULT_AI_ROSTER: AIDriverProfile[] = [
   { id: 'ai-1', name: 'Marco Rossi', color: 0xd62828, lineOffset: -0.2 },
@@ -45,10 +46,13 @@ export class AISystem {
   public createOpponents(count: number, totalLaps: number = 3): void {
     this.opponents = [];
     const clampedCount = Math.min(DEFAULT_AI_ROSTER.length, Math.max(1, count));
+    const trackPreset = this.track.definition.environmentPreset || this.track.definition.name;
+    const suggestedVehicles = VehicleRegistry.getSuggestedAIVehicles(trackPreset, clampedCount);
 
     for (let i = 0; i < clampedCount; i++) {
       const profile = DEFAULT_AI_ROSTER[i];
-      const opp = new AIOpponent(profile, this.track.checkpoints, totalLaps);
+      const vehicleDef = suggestedVehicles[i % suggestedVehicles.length];
+      const opp = new AIOpponent(profile, this.track.checkpoints, totalLaps, vehicleDef);
       this.opponents.push(opp);
     }
   }
