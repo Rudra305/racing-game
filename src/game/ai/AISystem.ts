@@ -32,7 +32,7 @@ export class AISystem {
 
   constructor(
     track: Track,
-    aiCount: number = 7,
+    aiCount: number = 5,
     difficulty: AIDifficultyLevel = AIDifficultyLevel.NORMAL,
     totalLaps: number = 3
   ) {

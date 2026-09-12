@@ -77,14 +77,17 @@ export class TireSystem {
     let driveForce = requestedDriveForce;
     let brakeForce = 0;
 
-    if (brakeInput > 0) {
-      const maxBrake = cfg.braking.brakePower * 1000;
-      brakeForce = brakeInput * maxBrake;
-    }
+    // Normal load with baseline static vehicle weight
+    const baseWeight = cfg.mass * 9.81;
+    const effectiveNormalLoad = Math.max(fzTotal, baseWeight);
 
-    // If airborne or completely unweighted, zero out drive force applied to ground
-    if (fzTotal <= 1.0) {
-      driveForce = 0;
+    // Friction coefficient scaled with vehicle handling grip tier
+    const muBraking = (cfg.handling.baseGrip / 26.0) * 1.15;
+    const maxBrakingTraction = effectiveNormalLoad * muBraking * surfaceGrip;
+
+    if (brakeInput > 0) {
+      const demandedBrake = brakeInput * cfg.braking.brakePower * 220.0;
+      brakeForce = Math.min(maxBrakingTraction, demandedBrake);
     }
 
     // 4. Lateral Grip & Cornering Stiffness
@@ -94,7 +97,14 @@ export class TireSystem {
     // Handbrake: dramatically reduces rear lateral grip to provoke controlled oversteer
     if (handbrake) {
       rearGripFactor = cfg.handling.driftGrip * surfaceGrip * 0.45;
-      brakeForce += cfg.braking.handbrakePower * 600;
+      const handbrakeLimit = effectiveNormalLoad * 0.55 * muBraking * surfaceGrip;
+      brakeForce += Math.min(handbrakeLimit, cfg.braking.handbrakePower * 180.0);
+    }
+
+    // If airborne or completely unweighted, zero out drive and brake forces applied to ground
+    if (fzTotal <= 1.0) {
+      driveForce = 0;
+      brakeForce = 0;
     }
 
     // Drift Detection & Sustained Drift Handling

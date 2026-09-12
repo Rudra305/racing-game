@@ -93,6 +93,24 @@ export class HUD {
     }
   }
 
+  public onAudioButtonClick(callback: () => void): void {
+    const btn = document.getElementById('btn-toggle-audio');
+    if (btn) {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        callback();
+      });
+    }
+  }
+
+  public updateAudioButton(isMuted: boolean): void {
+    const btn = document.getElementById('btn-toggle-audio');
+    if (btn) {
+      btn.textContent = isMuted ? '🔇 MUTED (M)' : '🔊 AUDIO (M)';
+      btn.style.color = isMuted ? '#f85149' : '#58a6ff';
+    }
+  }
+
   public onRestartButtonClick(callback: () => void): void {
     if (this.restartBtnEl) {
       this.restartBtnEl.addEventListener('click', (e) => {

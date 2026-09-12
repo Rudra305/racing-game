@@ -55,27 +55,28 @@ export class CameraManager {
     vehicleHeading: number,
     speedNorm: number,
     acceleration: number,
-    curbVibration: number,
+    _curbVibration: number,
     minGroundY: number = 0
   ): void {
     // Forward & right unit vectors
     this._forward.set(Math.sin(vehicleHeading), 0, Math.cos(vehicleHeading));
     this._right.set(Math.cos(vehicleHeading), 0, -Math.sin(vehicleHeading));
 
-    // 1. Dynamic Distance & Height (Smoothed Acceleration Setback & Brake Push)
-    // Damps high-frequency throttle/drag fluctuations to prevent high-speed camera jitter
+    // 1. Dynamic Distance (Smoothed Horizontal Acceleration Setback / Forward Braking Push)
+    // Stable horizontal camera lag without modifying vertical height
     this.smoothedAccel += (acceleration - this.smoothedAccel) * Math.min(1.0, 10.0 * delta);
-    const accelSetback = Math.max(-0.45, Math.min(0.65, this.smoothedAccel * 0.03));
+    const accelSetback = Math.max(-0.40, Math.min(0.55, this.smoothedAccel * 0.025));
     const effectiveDistance = this.config.distance + accelSetback;
-    const effectiveHeight = this.config.height - Math.min(0.15, accelSetback * 0.15);
+    // Strict constant vertical height relative to vehicle: NO acceleration-driven vertical displacement
+    const effectiveHeight = this.config.height;
 
-    // 2. Compute Ideal Camera Position
+    // 2. Compute Ideal Camera Position (Stable Height)
     this._idealPosition.copy(vehiclePosition);
     this._idealPosition.x -= this._forward.x * effectiveDistance;
     this._idealPosition.z -= this._forward.z * effectiveDistance;
     this._idealPosition.y += effectiveHeight;
 
-    // 3. Compute Ideal Look-At Point (Ahead over the vehicle hood)
+    // 3. Compute Ideal Look-At Point (Ahead over the vehicle hood at constant relative elevation)
     this._idealLookAt.copy(vehiclePosition);
     this._idealLookAt.x += this._forward.x * this.config.lookAhead;
     this._idealLookAt.z += this._forward.z * this.config.lookAhead;
@@ -97,24 +98,23 @@ export class CameraManager {
     this.camera.position.lerp(this._idealPosition, posAlpha);
     this.currentLookAt.lerp(this._idealLookAt, lookAlpha);
 
-    // 5. Impact Shake & Curb Rumble Vibration
-    this.shakePhase += delta * 28.0;
-    const totalShake = Math.max(this.shakeIntensity, curbVibration * 0.35);
-
-    if (totalShake > 0.01) {
-      const shakeX = Math.sin(this.shakePhase) * totalShake * 0.04;
-      const shakeY = Math.cos(this.shakePhase * 1.3) * totalShake * 0.025;
-      this.camera.position.x += shakeX;
-      this.camera.position.y += shakeY;
+    // 5. Impact Feedback (Horizontal Only — ZERO Vertical Shake)
+    // Curbs and vehicle bounce produce NO camera shake; impact shake is purely lateral
+    if (this.shakeIntensity > 0.01) {
+      this.shakePhase += delta * 24.0;
+      const shakeH = Math.sin(this.shakePhase) * this.shakeIntensity * 0.035;
+      this.camera.position.x += this._right.x * shakeH;
+      this.camera.position.z += this._right.z * shakeH;
+      // Absolute rule: NEVER modify camera.position.y with shake or curb vibration
     }
 
     // Decay impact shake
-    this.shakeIntensity *= Math.exp(-6.0 * delta);
+    this.shakeIntensity *= Math.exp(-6.5 * delta);
 
     // 6. Camera Collision & Ground Clipping Prevention
-    const safetyFloor = minGroundY + 1.1;
+    const safetyFloor = minGroundY + 0.8;
     if (this.camera.position.y < safetyFloor) {
-      this.camera.position.y = safetyFloor;
+      this.camera.position.y = THREE.MathUtils.lerp(this.camera.position.y, safetyFloor, 0.25);
     }
 
     this.camera.lookAt(this.currentLookAt);

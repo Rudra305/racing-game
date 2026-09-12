@@ -89,8 +89,11 @@ export class AIController {
       dt
     );
 
-    // 5. Speed computation
-    const adjustedTargetSpeed = target.targetSpeed * profile.targetSpeedFactor * avoidanceOut.speedMultiplier;
+    // 5. Speed computation with anticipatory corner braking
+    const localPoint = racingLine.getPointAtDistance(physics.trackDistance);
+    // Take minimum of local envelope speed (anticipates upcoming braking points) and look-ahead speed
+    const safeTargetSpeed = Math.min(localPoint.targetSpeed, target.targetSpeed);
+    const adjustedTargetSpeed = safeTargetSpeed * profile.targetSpeedFactor * avoidanceOut.speedMultiplier;
     const speedControls = this.speedController.computeControls(
       physics.forwardSpeed,
       adjustedTargetSpeed,
@@ -99,9 +102,17 @@ export class AIController {
       dt
     );
 
+    // Modulate corner exit throttle: smoothly ramp throttle as wheel straightens
+    let finalThrottle = speedControls.throttle;
+    if (Math.abs(steer) > 0.48 && physics.forwardSpeed > 14.0) {
+      finalThrottle *= 0.82; // Balance car mid-corner
+    } else if (Math.abs(steer) < 0.22 && speedControls.throttle > 0.15) {
+      finalThrottle = Math.min(1.0, finalThrottle * profile.cornerExitAggression);
+    }
+
     // 6. Set inputs directly on existing VehiclePhysics
     physics.setInputs(
-      speedControls.throttle,
+      finalThrottle,
       speedControls.brake,
       steer,
       false

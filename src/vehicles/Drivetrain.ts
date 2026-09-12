@@ -148,8 +148,18 @@ export class Drivetrain {
     const efficiency = 0.88;
     let driveForce = ((engineTorque * totalReduction) / wheelRadius) * efficiency;
 
-    // Clamp drive force by max longitudinal tire traction limit
-    const maxTraction = this.config.mass * 9.81 * 1.25;
+    // Clamp drive force by max longitudinal tire traction limit based on driven axle layout
+    let drivenAxleWeightRatio = 1.0;
+    if (trans.driveType === 'RWD') {
+      drivenAxleWeightRatio = 0.65; // Rear drive wheels with acceleration squat weight transfer
+    } else if (trans.driveType === 'FWD') {
+      drivenAxleWeightRatio = 0.45; // Front drive wheels with squat unweighting
+    } else {
+      drivenAxleWeightRatio = 1.0;  // AWD: all 4 wheels deliver longitudinal thrust
+    }
+
+    const muTraction = (this.config.handling.baseGrip / 26.0) * 1.18;
+    const maxTraction = this.config.mass * 9.81 * drivenAxleWeightRatio * muTraction;
     driveForce = Math.min(maxTraction, driveForce);
 
     return driveForce;

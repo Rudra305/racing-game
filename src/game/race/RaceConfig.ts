@@ -22,7 +22,7 @@ export interface RaceConfig {
 
 export const DEFAULT_RACE_CONFIG: RaceConfig = {
   laps: 3,
-  aiCount: 7, // 7 AI + 1 Player = 8 cars on grid
+  aiCount: 5, // 5 AI + 1 Player = 6 cars on grid
   countdownDuration: 3.0,
   difficulty: AIDifficultyLevel.NORMAL,
   allowRestart: true,

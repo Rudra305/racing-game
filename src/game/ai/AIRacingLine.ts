@@ -24,10 +24,10 @@ export class AIRacingLine {
   }
 
   private computeRacingLine(sampler: TrackSampler): void {
-    const maxSpeed = 58.0;     // ~209 km/h top speed on straight
+    const maxSpeed = 72.0;     // ~260 km/h top speed on straight
     const minCornerSpeed = 8.5;// ~31 km/h hairpin minimum
-    const maxLatAccel = 9.2;   // m/s² lateral grip capability
-    const maxBrakeAccel = 6.8; // m/s² braking capability for anticipation
+    const maxLatAccel = 9.5;   // m/s² lateral grip capability
+    const maxBrakeAccel = 7.8; // m/s² braking capability for backward anticipation pass
 
     // 1. First pass: compute target speed strictly from local curvature
     for (let i = 0; i < sampler.totalSamples; i++) {

@@ -92,8 +92,8 @@ export class SettingsModal {
           <div style="flex: 1;">
             <label style="display: block; font-size: 11px; font-weight: 700; color: #8b949e; text-transform: uppercase; margin-bottom: 8px; letter-spacing: 0.08em;">AI Opponents</label>
             <select id="setting-ai-count" style="width: 100%; background: #161d27; border: 1px solid rgba(255,255,255,0.15); color: #fff; padding: 8px 10px; border-radius: 6px; font-size: 12px; font-family: monospace; cursor: pointer;">
-              <option value="7" selected>7 AI (8 Cars Total)</option>
-              <option value="5">5 AI (6 Cars Total)</option>
+              <option value="7">7 AI (8 Cars Total)</option>
+              <option value="5" selected>5 AI (6 Cars Total)</option>
               <option value="3">3 AI (4 Cars Total)</option>
               <option value="1">1 AI (1v1 Duel)</option>
             </select>

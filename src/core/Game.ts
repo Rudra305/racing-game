@@ -21,11 +21,12 @@ import { BiomeType } from '../environment/EnvironmentTypes';
 import { RaceManager } from '../game/race/RaceManager';
 import { RaceState } from '../game/race/RaceState';
 import { AISystem } from '../game/ai/AISystem';
-import { AIDifficultyLevel } from '../game/race/RaceConfig';
+import { AIDifficultyLevel, DEFAULT_RACE_CONFIG } from '../game/race/RaceConfig';
 import { GarageManager } from '../ui/garage/GarageManager';
 import { VehicleDefinition } from '../vehicles/VehicleDefinition';
 import { VehicleCustomization } from '../vehicles/VehicleCustomization';
 import { VehicleRegistry } from '../vehicles/VehicleRegistry';
+import { AudioManager } from '../audio/AudioManager';
 
 export class Game {
   // Systems
@@ -36,6 +37,7 @@ export class Game {
   private renderer!: Renderer;
   private sceneManager!: SceneManager;
   private cameraManager!: CameraManager;
+  private audioManager!: AudioManager;
   private trackManager!: TrackManager;
   private track!: Track;
   private trackDebugRenderer!: TrackDebugRenderer;
@@ -75,6 +77,7 @@ export class Game {
     });
     this.sceneManager = new SceneManager();
     this.cameraManager = new CameraManager(GAME_CONFIG.camera);
+    this.audioManager = new AudioManager();
 
     // 3. Track Generation & Insertion via TrackManager
     this.trackManager = new TrackManager();
@@ -117,6 +120,7 @@ export class Game {
     const savedCar = this.garageManager.getSelectedVehicle();
     this.vehiclePhysics = new VehiclePhysics(savedCar.definition.config);
     this.vehiclePhysics.setSpawn(playerSlot.position, playerSlot.heading);
+    this.audioManager.setCategory(savedCar.definition.category);
 
     this.vehicle = new Vehicle(savedCar.definition, savedCar.customization);
     this.vehicle.syncWithPhysics(this.vehiclePhysics);
@@ -124,25 +128,26 @@ export class Game {
 
     this.vehicleController = new VehicleController(this.inputManager, this.vehiclePhysics);
 
-    // 5. Physics World with Camera Impact Callback
+    // 5. Physics World with Camera Impact Callback & Audio Feedback
     this.physicsWorld = new PhysicsWorld(this.track, this.vehiclePhysics, (penetration: number) => {
       this.cameraManager.addShake(Math.min(0.8, penetration * 0.9));
+      this.audioManager.triggerImpact(penetration);
     });
 
     // 6. Camera Initial Alignment
     this.cameraManager.resetToVehicle(this.vehiclePhysics.position, this.vehiclePhysics.heading);
 
-    // 7. Race System & AI Opponents (Phase 5)
+    // 7. Race System & AI Opponents (Phase 5 & 7)
     this.raceManager = new RaceManager(this.track, {
       laps: GAME_CONFIG.race.totalLaps,
-      aiCount: 7,
+      aiCount: DEFAULT_RACE_CONFIG.aiCount,
       countdownDuration: 3.0,
       difficulty: AIDifficultyLevel.NORMAL,
       allowRestart: true,
       rubberBanding: { enabled: false, strength: 0 }
     });
 
-    this.aiSystem = new AISystem(this.track, 7, AIDifficultyLevel.NORMAL, GAME_CONFIG.race.totalLaps);
+    this.aiSystem = new AISystem(this.track, DEFAULT_RACE_CONFIG.aiCount, AIDifficultyLevel.NORMAL, GAME_CONFIG.race.totalLaps);
     this.aiSystem.spawnOnGrid(this.track.startGrid);
     this.aiSystem.registerWithPositionManager(this.raceManager.positionManager);
 
@@ -191,6 +196,11 @@ export class Game {
       this.settingsModal.toggle();
     });
 
+    this.hud.onAudioButtonClick(() => {
+      const isMuted = this.audioManager.toggleMute();
+      this.hud.updateAudioButton(isMuted);
+    });
+
     this.hud.onRestartButtonClick(() => {
       this.restartRace();
     });
@@ -237,6 +247,11 @@ export class Game {
       } else {
         this.settingsModal.toggle();
       }
+    }
+
+    if (this.inputManager.consumeToggleAudio()) {
+      const isMuted = this.audioManager.toggleMute();
+      this.hud.updateAudioButton(isMuted);
     }
 
     // 2. Process Developer Jump Test (J)
@@ -323,6 +338,12 @@ export class Game {
       this.vehiclePhysics.acceleration,
       this.vehiclePhysics.suspensionSystem.curbVibration,
       groundInfo.height
+    );
+
+    // 2b. Update Reactive Web Audio Engine
+    this.audioManager.update(
+      this.vehiclePhysics.telemetry,
+      this.vehiclePhysics.drivetrain.isShifting
     );
 
     // 3. Update Shadow Camera Target
@@ -512,6 +533,7 @@ export class Game {
     this.assetManager.dispose();
     this.aiSystem.dispose();
     this.garageManager.dispose();
+    this.audioManager.dispose();
   }
 
   public openGarage(): void {
@@ -533,5 +555,6 @@ export class Game {
     this.vehiclePhysics.setConfig(def.config);
     this.vehicle.setDefinition(def, cust);
     this.cameraManager.resetToVehicle(this.vehiclePhysics.position, this.vehiclePhysics.heading);
+    this.audioManager.setCategory(def.category);
   }
 }

@@ -11,6 +11,7 @@ export interface InputActions {
   toggleTrackDebugRequested: boolean;
   toggleSettingsRequested: boolean;
   toggleGarageRequested: boolean;
+  toggleAudioRequested: boolean;
   jumpRequested: boolean;
 }
 
@@ -29,6 +30,7 @@ export class InputManager {
     toggleTrackDebugRequested: false,
     toggleSettingsRequested: false,
     toggleGarageRequested: false,
+    toggleAudioRequested: false,
     jumpRequested: false
   };
 
@@ -99,6 +101,10 @@ export class InputManager {
     if (code === 'KeyG' || key === 'g') {
       event.preventDefault();
       this.actions.toggleGarageRequested = true;
+    }
+    // Audio Mute toggle: M
+    if (code === 'KeyM' || key === 'm') {
+      this.actions.toggleAudioRequested = true;
     }
     // Developer Jump test: J
     if (code === 'KeyJ' || key === 'j') {
@@ -203,6 +209,12 @@ export class InputManager {
   public consumeJump(): boolean {
     const res = this.actions.jumpRequested;
     this.actions.jumpRequested = false;
+    return res;
+  }
+
+  public consumeToggleAudio(): boolean {
+    const res = this.actions.toggleAudioRequested;
+    this.actions.toggleAudioRequested = false;
     return res;
   }
 }

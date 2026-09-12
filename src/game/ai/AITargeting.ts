@@ -23,9 +23,20 @@ export class AITargeting {
     lateralOffset: number = 0,
     difficultyLookAheadFactor: number = 1.0
   ): AITarget {
-    // 1. Dynamic Look-ahead Distance based on speed
-    const rawL = (this.baseLookAhead + Math.max(0, forwardSpeed) * this.speedFactor) * difficultyLookAheadFactor;
-    const lookAheadDistance = Math.max(this.minLookAhead, Math.min(this.maxLookAhead, rawL));
+    // 1. Dynamic Look-ahead Distance based on speed and upcoming track curvature
+    const baseSpeedL = (this.baseLookAhead + Math.max(0, forwardSpeed) * this.speedFactor) * difficultyLookAheadFactor;
+
+    // Sample local and upcoming curvature along track
+    const localPoint = racingLine.getPointAtDistance(currentDistance);
+    const probeDist = currentDistance + baseSpeedL * 0.65;
+    const probePoint = racingLine.getPointAtDistance(probeDist);
+    const maxUpcomingCurvature = Math.max(localPoint.curvature, probePoint.curvature);
+
+    // Tight corners (high curvature) reduce look-ahead so AI adheres to apex rather than cutting early
+    const curvatureFactor = 1.0 / (1.0 + maxUpcomingCurvature * 28.0);
+    const rawL = baseSpeedL * curvatureFactor;
+    const effectiveMin = Math.max(5.5, this.minLookAhead * curvatureFactor);
+    const lookAheadDistance = Math.max(effectiveMin, Math.min(this.maxLookAhead, rawL));
 
     // 2. Query racing point at look-ahead distance
     const targetPoint: AIRacingPoint = racingLine.getPointAtDistance(currentDistance + lookAheadDistance);
