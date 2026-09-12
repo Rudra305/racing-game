@@ -68,8 +68,8 @@ export class AIOpponent {
     this.checkpointManager.reset();
   }
 
-  public sync(): void {
-    this.vehicle.syncWithPhysics(this.physics);
+  public sync(alpha: number = 1.0): void {
+    this.vehicle.syncWithPhysics(this.physics, alpha);
   }
 
   public dispose(): void {

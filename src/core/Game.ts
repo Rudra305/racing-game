@@ -323,17 +323,18 @@ export class Game {
     }
   }
 
-  private onRenderUpdate(dt: number): void {
-    // 1. Synchronize Visual Vehicle Meshes with Physics States
-    this.vehicle.syncWithPhysics(this.vehiclePhysics);
-    this.aiSystem.syncVisuals();
+  private onRenderUpdate(dt: number, alpha: number): void {
+    // 1. Synchronize Visual Vehicle Meshes with Interpolated Physics States
+    this.vehicle.syncWithPhysics(this.vehiclePhysics, alpha);
+    this.aiSystem.syncVisuals(alpha);
 
-    // 2. Update Camera Follow, Acceleration Setback, Curb Shake & Speed-Dependent FOV
+    // 2. Update Camera Follow using Smooth Visual Interpolated Position & Heading
     const groundInfo = this.track.queryGroundElevation(this.cameraManager.camera.position, true);
+    const visualHeading = this.vehiclePhysics.getInterpolatedHeading(alpha);
     this.cameraManager.update(
       dt,
-      this.vehiclePhysics.position,
-      this.vehiclePhysics.heading,
+      this.vehicle.group.position,
+      visualHeading,
       this.vehiclePhysics.normalizedSpeed,
       this.vehiclePhysics.acceleration,
       this.vehiclePhysics.suspensionSystem.curbVibration,
@@ -347,10 +348,10 @@ export class Game {
     );
 
     // 3. Update Shadow Camera Target
-    this.sceneManager.updateLightTarget(this.vehiclePhysics.position);
+    this.sceneManager.updateLightTarget(this.vehicle.group.position);
 
     // 4. Update Environment LOD & Distance Culling
-    this.environmentManager.update(this.vehiclePhysics.position);
+    this.environmentManager.update(this.vehicle.group.position);
 
     // 5. Update HUD Telemetry (Throttled internally for text, per-frame for speed/RPM)
     this.hud.update(dt, this.raceManager, this.vehiclePhysics, this.track.checkpoints.length);

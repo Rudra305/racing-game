@@ -47,8 +47,8 @@ export const GAME_CONFIG: GameConfig = {
     distance: 5.8,
     height: 2.1,
     lookAhead: 3.5,
-    positionDamping: 8.0,
-    rotationDamping: 6.0,
+    positionDamping: 8.5,
+    rotationDamping: 8.5,
     minFov: 60.0,
     maxFov: 78.0
   },

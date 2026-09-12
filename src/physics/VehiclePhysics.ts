@@ -53,6 +53,12 @@ export class VehiclePhysics {
   public wheelRotation: number = 0;
   public isAirborne: boolean = false;
 
+  // Previous State Buffers for Fixed-Timestep Render Interpolation
+  public readonly previousPosition: THREE.Vector3 = new THREE.Vector3();
+  public previousHeading: number = 0;
+  public previousRoadPitchAngle: number = 0;
+  public previousRoadBankAngle: number = 0;
+
   // Active Inputs
   private throttleInput: number = 0;
   private brakeInput: number = 0;
@@ -107,6 +113,12 @@ export class VehiclePhysics {
     this.roadBankAngle = 0;
     this.roadPitchAngle = 0;
 
+    // Synchronize previous state buffers
+    this.previousPosition.copy(position);
+    this.previousHeading = heading;
+    this.previousRoadPitchAngle = 0;
+    this.previousRoadBankAngle = 0;
+
     this.drivetrain.reset();
     this.steeringSystem.reset();
     this.suspensionSystem.reset();
@@ -152,6 +164,12 @@ export class VehiclePhysics {
    * Fixed Timestep Physics Simulation Step (60 Hz)
    */
   public step(dt: number): void {
+    // Record previous state for render transform interpolation
+    this.previousPosition.copy(this.position);
+    this.previousHeading = this.heading;
+    this.previousRoadPitchAngle = this.roadPitchAngle;
+    this.previousRoadBankAngle = this.roadBankAngle;
+
     const cfg = this.config;
     const speedKmH = this.speedKmH;
 
@@ -389,5 +407,36 @@ export class VehiclePhysics {
   public triggerJump(upwardVelocity: number = 4.5): void {
     this.isAirborne = true;
     this.verticalSpeed = upwardVelocity;
+  }
+
+  /**
+   * Computes the smoothly interpolated 3D position between previous and current physics ticks.
+   */
+  public getInterpolatedPosition(alpha: number, out: THREE.Vector3): THREE.Vector3 {
+    return out.lerpVectors(this.previousPosition, this.position, alpha);
+  }
+
+  /**
+   * Computes the shortest-arc interpolated heading angle (radians).
+   */
+  public getInterpolatedHeading(alpha: number): number {
+    let diff = this.heading - this.previousHeading;
+    while (diff < -Math.PI) diff += Math.PI * 2;
+    while (diff > Math.PI) diff -= Math.PI * 2;
+    return this.previousHeading + diff * alpha;
+  }
+
+  /**
+   * Computes the smoothly interpolated road pitch angle.
+   */
+  public getInterpolatedRoadPitch(alpha: number): number {
+    return THREE.MathUtils.lerp(this.previousRoadPitchAngle, this.roadPitchAngle, alpha);
+  }
+
+  /**
+   * Computes the smoothly interpolated road bank angle.
+   */
+  public getInterpolatedRoadBank(alpha: number): number {
+    return THREE.MathUtils.lerp(this.previousRoadBankAngle, this.roadBankAngle, alpha);
   }
 }

@@ -108,14 +108,14 @@ export class SuspensionSystem {
     // 2. Curb Vibration Rumble (Subtle, realistic road feedback)
     let curbOffset = 0;
     if (onCurb && speedKmH > 10) {
-      this.curbVibePhase += dt * Math.min(65.0, speedKmH * 0.5);
-      curbOffset = Math.sin(this.curbVibePhase) * 0.009;
+      this.curbVibePhase += dt * Math.min(45.0, speedKmH * 0.4);
+      curbOffset = Math.sin(this.curbVibePhase) * 0.004;
       this.curbVibration = Math.abs(curbOffset);
     } else {
-      this.curbVibration *= Math.exp(-14.0 * dt);
+      this.curbVibration *= Math.exp(-18.0 * dt);
     }
 
-    // 3. Spring-Damper Simulation per Wheel
+    // 3. Critically Damped Spring-Damper Simulation per Wheel
     for (let i = 0; i < 4; i++) {
       const w = this.wheels[i];
       w.normalForce = loads[i];
@@ -126,9 +126,13 @@ export class SuspensionSystem {
       const targetDisp = ((loads[i] - baseWheelLoad) / (susp.stiffness * 800)) + (i % 2 === 0 ? curbOffset : -curbOffset);
       const clampedTarget = Math.max(-susp.maxTravel, Math.min(susp.maxTravel, targetDisp));
 
-      // Damped harmonic tracking
-      const springForce = (clampedTarget - w.displacement) * susp.stiffness * 1.5;
-      const dampingForce = -w.velocity * susp.damping;
+      // Critically damped harmonic tracking (zeta >= 1.0) to eliminate resonant vibration
+      const k = susp.stiffness * 1.5;
+      const criticalDamping = 2.0 * Math.sqrt(k);
+      const effectiveDamping = Math.max(susp.damping * 1.8, criticalDamping * 1.05);
+
+      const springForce = (clampedTarget - w.displacement) * k;
+      const dampingForce = -w.velocity * effectiveDamping;
       const vertAcc = springForce + dampingForce;
 
       w.velocity += vertAcc * dt;

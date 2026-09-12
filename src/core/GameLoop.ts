@@ -1,12 +1,13 @@
 import { Time } from './Time';
 import { GAME_CONFIG } from '../config/GameConfig';
 
-export type UpdateCallback = (dt: number) => void;
+export type FixedUpdateCallback = (dt: number) => void;
+export type RenderUpdateCallback = (dt: number, alpha: number) => void;
 
 export class GameLoop {
   private time: Time;
-  private onFixedUpdate: UpdateCallback;
-  private onRenderUpdate: UpdateCallback;
+  private onFixedUpdate: FixedUpdateCallback;
+  private onRenderUpdate: RenderUpdateCallback;
 
   private isRunning: boolean = false;
   private animationFrameId: number = 0;
@@ -15,8 +16,8 @@ export class GameLoop {
 
   constructor(
     time: Time,
-    onFixedUpdate: UpdateCallback,
-    onRenderUpdate: UpdateCallback
+    onFixedUpdate: FixedUpdateCallback,
+    onRenderUpdate: RenderUpdateCallback
   ) {
     this.time = time;
     this.onFixedUpdate = onFixedUpdate;
@@ -54,8 +55,11 @@ export class GameLoop {
       subSteps++;
     }
 
-    // Render update at display refresh rate
-    this.onRenderUpdate(dt);
+    // Compute interpolation alpha for smooth visual rendering between fixed physics ticks
+    const alpha = Math.min(1.0, Math.max(0.0, this.time.accumulator / this.fixedStep));
+
+    // Render update at display refresh rate with interpolation alpha
+    this.onRenderUpdate(dt, alpha);
 
     this.animationFrameId = requestAnimationFrame(this.tick.bind(this));
   }

@@ -169,28 +169,38 @@ export class Track {
     let bankAngle: number = 0;
     let pitchAngle: number = 0;
 
+    const bankOffset = lateralDist * this._interpRight.y;
+    const roadBaseHeight = this._interpPos.y + bankOffset;
+
     if (absLat <= roadHalf) {
       // Vehicle is on the elevated, banked asphalt road surface
       isRoad = true;
-      const bankOffset = lateralDist * this._interpRight.y;
-      height = this._interpPos.y + bankOffset + 0.04;
+      height = roadBaseHeight + 0.04;
       normal = this._interpNormal;
       surface = SURFACE_PROPERTIES[SurfaceType.ASPHALT];
       bankAngle = banking;
       pitchAngle = Math.atan2(gradient, 1.0);
     } else if (absLat <= roadHalf + 0.9) {
-      // Vehicle is on the rumble kerb
+      // Vehicle is on the rumble kerb (smooth 15cm bevel transition)
       isRoad = true;
-      const bankOffset = lateralDist * this._interpRight.y;
-      height = this._interpPos.y + bankOffset + 0.08;
+      const curbAlpha = Math.min(1.0, (absLat - roadHalf) / 0.15);
+      const curbOffset = THREE.MathUtils.lerp(0.04, 0.075, curbAlpha);
+      height = roadBaseHeight + curbOffset;
       normal = this._interpNormal;
       surface = SURFACE_PROPERTIES[SurfaceType.KERB];
       bankAngle = banking;
       pitchAngle = Math.atan2(gradient, 1.0);
     } else {
-      // Vehicle is off-road on the procedural terrain
+      // Vehicle is off-road on procedural terrain (smooth 40cm blend)
+      const terrainHeight = this.terrain.getHeightAt(position.x, position.z);
+      const offRoadDist = absLat - (roadHalf + 0.9);
+      if (offRoadDist < 0.4) {
+        const blendAlpha = offRoadDist / 0.4;
+        height = THREE.MathUtils.lerp(roadBaseHeight + 0.075, terrainHeight, blendAlpha);
+      } else {
+        height = terrainHeight;
+      }
       isRoad = false;
-      height = this.terrain.getHeightAt(position.x, position.z);
       surface = this.terrain.getSurfaceAt(position.x, position.z);
       normal = this._groundNormal;
     }

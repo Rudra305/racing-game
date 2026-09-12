@@ -167,9 +167,9 @@ export class AISystem {
   /**
    * Synchronize visual meshes of all AI opponents with physics positions.
    */
-  public syncVisuals(): void {
+  public syncVisuals(alpha: number = 1.0): void {
     for (const opp of this.opponents) {
-      opp.sync();
+      opp.sync(alpha);
     }
   }
 

@@ -23,6 +23,7 @@ export class Vehicle {
   // Wheels: [0: FL, 1: FR, 2: RL, 3: RR]
   public wheelSteerPivots: THREE.Group[] = [];
   public wheelMeshes: THREE.Mesh[] = [];
+  private readonly _interpPos: THREE.Vector3 = new THREE.Vector3();
 
   constructor(
     definitionOrConfig?: VehicleDefinition | VehicleConfig,
@@ -282,25 +283,28 @@ export class Vehicle {
   }
 
   /**
-   * Synchronize visual representation with physics state.
+   * Synchronize visual representation with physics state using interpolation alpha (0..1).
    */
-  public syncWithPhysics(physics: VehiclePhysics): void {
-    // 1. Position & 3D Orientation (Yaw, Pitch along road gradient, Roll along road banking)
-    this.group.position.x = physics.position.x;
-    this.group.position.y = physics.position.y;
-    this.group.position.z = physics.position.z;
+  public syncWithPhysics(physics: VehiclePhysics, alpha: number = 1.0): void {
+    // 1. Interpolated 3D Position & Orientation (Yaw, Pitch along road gradient, Roll along road banking)
+    physics.getInterpolatedPosition(alpha, this._interpPos);
+    this.group.position.copy(this._interpPos);
 
-    this.group.rotation.set(-physics.roadPitchAngle, physics.heading, physics.roadBankAngle, 'YXZ');
+    const heading = physics.getInterpolatedHeading(alpha);
+    const pitch = physics.getInterpolatedRoadPitch(alpha);
+    const bank = physics.getInterpolatedRoadBank(alpha);
+
+    this.group.rotation.set(-pitch, heading, bank, 'YXZ');
 
     // 2. Chassis Pitch (rear squat on accel, front dive on brake) & Roll (cornering)
     const susp = physics.suspensionSystem;
     this.chassisGroup.rotation.x = susp.bodyPitch;
     this.chassisGroup.rotation.z = susp.bodyRoll;
 
-    // 3. Wheel Suspension Travel Displacement
+    // 3. Wheel Suspension Travel Displacement (smooth curb rumble)
     const baseR = this.config.dimensions.wheelRadius;
     for (let i = 0; i < 4; i++) {
-      const curb = (i % 2 === 0 ? 1 : -1) * susp.curbVibration * 0.5;
+      const curb = (i % 2 === 0 ? 1 : -1) * susp.curbVibration * 0.25;
       this.wheelSteerPivots[i].position.y = baseR + curb;
     }
 
