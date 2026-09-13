@@ -71,6 +71,12 @@ export class ProceduralAssets {
     metalness: 0.05
   });
 
+  public static rubberMaterial = new THREE.MeshStandardMaterial({
+    color: 0x1a1a1e, // Matte vulcanized tire rubber
+    roughness: 0.94,
+    metalness: 0.06
+  });
+
   /**
    * 1. Alpine Fir Tree (LOD 0, 1, 2)
    */
@@ -434,6 +440,76 @@ export class ProceduralAssets {
     parts.push(dome);
 
     return this.mergeGeometries(parts);
+  }
+
+  /**
+   * 14. Hairpin Runoff Tire Barrier Stack
+   * 3-tier stacked racing tire bundle
+   */
+  public static createTireBarrierStackGeometry(): THREE.BufferGeometry {
+    const parts: THREE.BufferGeometry[] = [];
+    const tiers = 3;
+    const tireRadius = 0.42;
+    const tireHeight = 0.26;
+
+    for (let i = 0; i < tiers; i++) {
+      const tire = new THREE.CylinderGeometry(tireRadius, tireRadius, tireHeight, 14);
+      tire.translate(0, tireHeight * 0.5 + i * tireHeight, 0);
+      parts.push(tire);
+    }
+
+    return this.mergeGeometries(parts);
+  }
+
+  /**
+   * 15. Corner Distance Brake Marker Sign (150m, 100m, 50m)
+   */
+  public static createBrakeMarkerMesh(distanceMeters: number): THREE.Group {
+    const group = new THREE.Group();
+
+    // Post
+    const postGeo = new THREE.CylinderGeometry(0.04, 0.04, 1.4, 8);
+    postGeo.translate(0, 0.7, 0);
+    const postMesh = new THREE.Mesh(postGeo, this.steelMaterial);
+    postMesh.castShadow = true;
+    group.add(postMesh);
+
+    // Sign Board
+    const boardGeo = new THREE.BoxGeometry(0.85, 0.75, 0.04);
+    boardGeo.translate(0, 1.15, 0);
+
+    // High-contrast procedural distance texture
+    const canvas = document.createElement('canvas');
+    canvas.width = 128;
+    canvas.height = 128;
+    const ctx = canvas.getContext('2d');
+    if (ctx) {
+      ctx.fillStyle = '#f8fafc';
+      ctx.fillRect(0, 0, 128, 128);
+      ctx.lineWidth = 8;
+      ctx.strokeStyle = '#0f172a';
+      ctx.strokeRect(4, 4, 120, 120);
+
+      ctx.fillStyle = '#0f172a';
+      ctx.font = 'bold 54px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(distanceMeters.toString(), 64, 64);
+    }
+    const texture = new THREE.CanvasTexture(canvas);
+    texture.colorSpace = THREE.SRGBColorSpace;
+
+    const boardMat = new THREE.MeshStandardMaterial({
+      map: texture,
+      roughness: 0.4,
+      metalness: 0.1
+    });
+
+    const boardMesh = new THREE.Mesh(boardGeo, boardMat);
+    boardMesh.castShadow = true;
+    group.add(boardMesh);
+
+    return group;
   }
 
   /**

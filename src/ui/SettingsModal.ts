@@ -8,6 +8,7 @@ export interface SettingsModalCallbacks {
   onQualityChanged?: (scale: number) => void;
   onAIDifficultyChanged?: (difficulty: AIDifficultyLevel) => void;
   onAICountChanged?: (count: number) => void;
+  onWeatherChanged?: (weather: 'CLEAR' | 'CLOUDY' | 'LIGHT_RAIN' | 'HEAVY_RAIN' | 'CYCLE') => void;
   onClosed: () => void;
 }
 
@@ -19,6 +20,7 @@ export class SettingsModal {
 
   // DOM Inputs
   private trackPresetSelect!: HTMLSelectElement;
+  private weatherSelect!: HTMLSelectElement;
   private graphicsQualitySelect!: HTMLSelectElement;
   private sensitivitySlider!: HTMLInputElement;
   private sensitivityVal!: HTMLElement;
@@ -84,6 +86,18 @@ export class SettingsModal {
             <option value="alpine-circuit">Alpine Test Circuit (42m Elevation, Banked Hairpin)</option>
             <option value="coastal-speedway">Coastal Speedway (High-Speed Sweepers, Ocean Plains)</option>
             <option value="grand-prix">Grand Prix Technical (Technical Chicanes, Rolling Hills)</option>
+          </select>
+        </div>
+
+        <!-- Weather Condition -->
+        <div style="margin-bottom: 20px;">
+          <label style="display: block; font-size: 11px; font-weight: 700; color: #8b949e; text-transform: uppercase; margin-bottom: 8px; letter-spacing: 0.08em;">Race Weather Condition</label>
+          <select id="setting-weather-preset" style="width: 100%; background: #161d27; border: 1px solid rgba(88, 166, 255, 0.4); color: #58a6ff; padding: 8px 12px; border-radius: 6px; font-size: 13px; font-family: monospace; cursor: pointer; font-weight: 700;">
+            <option value="CLEAR" selected>☀️ Clear Sky (Golden Alpine Sunlight)</option>
+            <option value="CLOUDY">⛅ Overcast (Soft Diffuse Lighting)</option>
+            <option value="LIGHT_RAIN">🌦️ Light Rain (Wet Road Sheen & Tire Spray)</option>
+            <option value="HEAVY_RAIN">🌧️ Heavy Rain (Thunder & Low Visibility)</option>
+            <option value="CYCLE">🔄 Dynamic Weather Cycle</option>
           </select>
         </div>
 
@@ -192,6 +206,7 @@ export class SettingsModal {
 
     // Cache elements
     this.trackPresetSelect = container.querySelector('#setting-track-preset') as HTMLSelectElement;
+    this.weatherSelect = container.querySelector('#setting-weather-preset') as HTMLSelectElement;
     this.graphicsQualitySelect = container.querySelector('#setting-graphics-preset') as HTMLSelectElement;
     this.sensitivitySlider = container.querySelector('#setting-sensitivity') as HTMLInputElement;
     this.sensitivityVal = container.querySelector('#val-sensitivity') as HTMLElement;
@@ -209,6 +224,14 @@ export class SettingsModal {
     container.querySelector('#btn-reset-settings')?.addEventListener('click', () => {
       this.steeringSystem.resetToDefaults();
       this.syncFromSettings();
+    });
+
+    this.weatherSelect.addEventListener('change', () => {
+      const w = this.weatherSelect.value as 'CLEAR' | 'CLOUDY' | 'LIGHT_RAIN' | 'HEAVY_RAIN' | 'CYCLE';
+      try {
+        localStorage.setItem('racingGame.weather', w);
+      } catch {}
+      this.callbacks.onWeatherChanged?.(w);
     });
 
     this.aiCountSelect.addEventListener('change', () => {
@@ -285,6 +308,12 @@ export class SettingsModal {
     }
   }
 
+  public setWeather(weather: string): void {
+    if (this.weatherSelect) {
+      this.weatherSelect.value = weather;
+    }
+  }
+
   public setAIDifficulty(diff: AIDifficultyLevel): void {
     if (this.aiDifficultySelect) {
       this.aiDifficultySelect.value = diff;
@@ -322,6 +351,10 @@ export class SettingsModal {
       const savedCount = localStorage.getItem('racingGame.aiCount');
       if (savedCount && this.aiCountSelect) {
         this.aiCountSelect.value = savedCount;
+      }
+      const savedWeather = localStorage.getItem('racingGame.weather');
+      if (savedWeather && this.weatherSelect) {
+        this.weatherSelect.value = savedWeather;
       }
     } catch {}
   }

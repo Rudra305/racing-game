@@ -10,6 +10,7 @@ export class SurfaceSystem {
   public accelerationModifier: number = 1.0;
   public brakingModifier: number = 1.0;
   public isOnKerb: boolean = false;
+  public wetGripModifier: number = 1.0;
 
   public reset(): void {
     this.currentSurface = SurfaceType.ASPHALT;
@@ -18,6 +19,7 @@ export class SurfaceSystem {
     this.accelerationModifier = 1.0;
     this.brakingModifier = 1.0;
     this.isOnKerb = false;
+    this.wetGripModifier = 1.0;
   }
 
   /**
@@ -29,7 +31,8 @@ export class SurfaceSystem {
 
     // Smooth transition between surfaces to prevent sharp physics shocks
     const blendRate = 0.20;
-    this.effectiveGrip += (targetProps.grip - this.effectiveGrip) * blendRate;
+    const targetGrip = targetProps.grip * this.wetGripModifier;
+    this.effectiveGrip += (targetGrip - this.effectiveGrip) * blendRate;
     this.effectiveRollingResistance += (targetProps.rollingResistance - this.effectiveRollingResistance) * blendRate;
     this.accelerationModifier += (targetProps.accelerationModifier - this.accelerationModifier) * blendRate;
     this.brakingModifier += (targetProps.brakingModifier - this.brakingModifier) * blendRate;

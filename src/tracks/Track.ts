@@ -268,6 +268,26 @@ export class Track {
   }
 
   /**
+   * Dynamically adjusts road and kerb specular, roughness, and color for weather wetness (0..1).
+   */
+  public setWetness(wetness: number): void {
+    const w = Math.max(0, Math.min(1.0, wetness));
+
+    const roadMat = this.meshes.roadMesh.material as THREE.MeshStandardMaterial;
+    if (roadMat) {
+      roadMat.roughness = THREE.MathUtils.lerp(0.88, 0.22, w);
+      roadMat.metalness = THREE.MathUtils.lerp(0.08, 0.24, w);
+      const col = new THREE.Color(0xffffff).lerp(new THREE.Color(0xd0d5dc), w * 0.45);
+      roadMat.color.copy(col);
+    }
+
+    const kerbMat = this.meshes.kerbMesh.material as THREE.MeshStandardMaterial;
+    if (kerbMat) {
+      kerbMat.roughness = THREE.MathUtils.lerp(0.75, 0.28, w);
+    }
+  }
+
+  /**
    * Comprehensive WebGL resource disposal.
    */
   public dispose(): void {

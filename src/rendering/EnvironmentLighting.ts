@@ -66,6 +66,34 @@ export class EnvironmentLighting {
     this.sunLight.target.updateMatrixWorld();
   }
 
+  public setLighting(
+    sunColor: number,
+    sunIntensity: number,
+    skyColor: number,
+    groundColor: number,
+    ambientIntensity: number
+  ): void {
+    this.sunLight.color.setHex(sunColor);
+    this.sunLight.intensity = sunIntensity;
+
+    this.hemiLight.color.setHex(skyColor);
+    this.hemiLight.groundColor.setHex(groundColor);
+    this.hemiLight.intensity = ambientIntensity;
+
+    // Rim light tracks ambient proportion
+    this.rimLight.intensity = Math.max(0.1, ambientIntensity * 0.45);
+  }
+
+  public setShadowResolution(res: number): void {
+    const clampedRes = Math.max(512, Math.min(2048, res));
+    if (this.sunLight.shadow.map) {
+      this.sunLight.shadow.map.dispose();
+      this.sunLight.shadow.map = null as any;
+    }
+    this.sunLight.shadow.mapSize.width = clampedRes;
+    this.sunLight.shadow.mapSize.height = clampedRes;
+  }
+
   public get sunDirection(): THREE.Vector3 {
     return this.sunOffset.clone().normalize();
   }

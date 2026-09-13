@@ -5,6 +5,8 @@ import { CollisionAudio } from './CollisionAudio';
 import { EnvironmentAudio } from './EnvironmentAudio';
 import { WorkshopMusic } from './WorkshopMusic';
 import { RaceAudio } from './RaceAudio';
+import { WeatherAudio } from './WeatherAudio';
+import { WeatherType } from '../environment/WeatherTypes';
 import { VehicleTelemetry } from '../physics/VehiclePhysics';
 
 export class AudioManager {
@@ -18,6 +20,7 @@ export class AudioManager {
   public surfaceAudio!: SurfaceAudio;
   public collisionAudio!: CollisionAudio;
   public environmentAudio!: EnvironmentAudio;
+  public weatherAudio!: WeatherAudio;
   public workshopMusic!: WorkshopMusic;
   public raceAudio!: RaceAudio;
 
@@ -59,6 +62,7 @@ export class AudioManager {
       this.surfaceAudio = new SurfaceAudio(this.ctx, this.compressor);
       this.collisionAudio = new CollisionAudio(this.ctx, this.compressor);
       this.environmentAudio = new EnvironmentAudio(this.ctx, this.compressor);
+      this.weatherAudio = new WeatherAudio(this.ctx, this.compressor);
       this.workshopMusic = new WorkshopMusic(this.ctx, this.compressor);
       this.raceAudio = new RaceAudio(this.ctx, this.compressor);
 
@@ -82,6 +86,7 @@ export class AudioManager {
         this.tireAudio.start();
         this.surfaceAudio.start();
         this.environmentAudio.start();
+        this.weatherAudio.start();
 
         if (this.isGarageActive) {
           this.workshopMusic.play();
@@ -204,7 +209,10 @@ export class AudioManager {
     telemetry: VehicleTelemetry,
     isShifting: boolean = false,
     _dt: number = 0.016,
-    isRaceActive: boolean = true
+    isRaceActive: boolean = true,
+    weatherType: WeatherType = WeatherType.CLEAR,
+    rainAudioGain: number = 0,
+    roadWetness: number = 0
   ): void {
     if (!this.isInitialized || !this.ctx || this.ctx.state !== 'running') return;
 
@@ -213,6 +221,7 @@ export class AudioManager {
       this.tireAudio.stop();
       this.surfaceAudio.stop();
       this.environmentAudio.stop();
+      this.weatherAudio.stop();
       return;
     }
 
@@ -244,6 +253,15 @@ export class AudioManager {
 
     // 5. Aerodynamic Wind Rush
     this.environmentAudio.update(telemetry.speedKmH);
+
+    // 6. Weather Ambience & Wet Road Tire Spray
+    this.weatherAudio.update(weatherType, rainAudioGain, roadWetness, telemetry.speedKmH, isRaceActive);
+  }
+
+  public triggerThunder(): void {
+    if (this.isInitialized && this.weatherAudio) {
+      this.weatherAudio.triggerThunder();
+    }
   }
 
   public dispose(): void {

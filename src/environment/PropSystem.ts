@@ -13,6 +13,8 @@ export class PropSystem {
     this.generateReflectors(sampler);
     this.generateSigns(sampler);
     this.generateLandmarks(sampler, terrain, biome);
+    this.generateTireBarriers(sampler);
+    this.generateBrakeMarkers(sampler);
   }
 
   /**
@@ -196,6 +198,110 @@ export class PropSystem {
     mastMesh.receiveShadow = true;
     this.group.add(mastMesh);
     this.meshes.push(mastMesh);
+  }
+
+  /**
+   * 5. Hairpin Runoff Tire Barrier Stacks
+   * Placed along the outside perimeter of high-curvature corners
+   */
+  private generateTireBarriers(sampler: TrackSampler): void {
+    const samples = sampler.samples;
+    const totalSamples = samples.length;
+    const transforms: THREE.Matrix4[] = [];
+    const dummy = new THREE.Object3D();
+
+    for (let i = 0; i < totalSamples; i += 3) {
+      const s = samples[i];
+      if (s.curvature > 0.0075) {
+        const isRight = s.banking > 0;
+        const roadHalf = s.width * 0.5;
+        const outerDir = isRight ? -1 : 1;
+        const baseOffset = (roadHalf + 2.2) * outerDir;
+        const secondRowOffset = (roadHalf + 3.0) * outerDir;
+
+        const heading = Math.atan2(s.tangent.x, s.tangent.z);
+
+        // Row 1
+        dummy.position.copy(s.position).addScaledVector(s.bankedRight, baseOffset);
+        dummy.position.y += 0.05;
+        dummy.rotation.set(0, heading, 0);
+        dummy.scale.set(1, 1, 1);
+        dummy.updateMatrix();
+        transforms.push(dummy.matrix.clone());
+
+        // Row 2 (staggered depth)
+        dummy.position.copy(s.position).addScaledVector(s.bankedRight, secondRowOffset);
+        dummy.updateMatrix();
+        transforms.push(dummy.matrix.clone());
+      }
+    }
+
+    if (transforms.length > 0) {
+      const geo = ProceduralAssets.createTireBarrierStackGeometry();
+      const instancedMesh = new THREE.InstancedMesh(geo, ProceduralAssets.rubberMaterial, transforms.length);
+      instancedMesh.castShadow = true;
+      instancedMesh.receiveShadow = true;
+
+      for (let idx = 0; idx < transforms.length; idx++) {
+        instancedMesh.setMatrixAt(idx, transforms[idx]);
+      }
+      instancedMesh.instanceMatrix.needsUpdate = true;
+
+      this.group.add(instancedMesh);
+      this.meshes.push(instancedMesh);
+    }
+  }
+
+  /**
+   * 6. Corner Entry Brake Distance Markers (150m, 100m, 50m)
+   */
+  private generateBrakeMarkers(sampler: TrackSampler): void {
+    const samples = sampler.samples;
+    const totalLength = sampler.totalLength;
+    const cornerApexDistances: { dist: number; isRight: boolean }[] = [];
+
+    // Find local maxima of curvature
+    for (let i = 2; i < samples.length - 2; i++) {
+      const prev = samples[i - 1].curvature;
+      const curr = samples[i].curvature;
+      const next = samples[i + 1].curvature;
+
+      if (curr > 0.009 && curr >= prev && curr >= next) {
+        // Debounce: ensure not right next to another detected apex
+        const dist = samples[i].distance;
+        const tooClose = cornerApexDistances.some(a => Math.abs(a.dist - dist) < 120);
+        if (!tooClose) {
+          cornerApexDistances.push({
+            dist,
+            isRight: samples[i].banking > 0
+          });
+        }
+      }
+    }
+
+    const markerDistances = [150, 100, 50];
+
+    for (const apex of cornerApexDistances) {
+      for (const mDist of markerDistances) {
+        let boardDist = apex.dist - mDist;
+        if (boardDist < 0) boardDist += totalLength;
+
+        const s = sampler.getSampleAtDistance(boardDist);
+        const roadHalf = s.width * 0.5;
+        // Place on the outside approach edge
+        const latOffset = (roadHalf + 2.0) * (apex.isRight ? -1 : 1);
+
+        const markerGroup = ProceduralAssets.createBrakeMarkerMesh(mDist);
+        markerGroup.position.copy(s.position).addScaledVector(s.bankedRight, latOffset);
+        markerGroup.position.y += 0.05;
+
+        // Face oncoming driver
+        const heading = Math.atan2(s.tangent.x, s.tangent.z);
+        markerGroup.rotation.y = heading + Math.PI;
+
+        this.group.add(markerGroup);
+      }
+    }
   }
 
   public dispose(): void {

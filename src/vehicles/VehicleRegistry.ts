@@ -804,7 +804,7 @@ export class VehicleRegistry {
         bodyType: 'suv',
         modelAssetId: 'ford-f150-raptor-r',
         modelUrl: '/assets/models/vehicles/ford-f150-raptor-r.glb',
-        modelRotationY: 0,
+        modelRotationY: Math.PI,
         modelOffsetY: 0.02,
         modelScaleMultiplier: 1.0,
         supportsAdvancedCustomization: true,

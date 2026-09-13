@@ -34,4 +34,15 @@ export class Atmosphere {
     this.fogColor.setHex(hex);
     this.fog.color.copy(this.fogColor);
   }
+
+  public setAtmosphere(color: THREE.Color | number, near: number, far: number): void {
+    if (typeof color === 'number') {
+      this.fogColor.setHex(color);
+    } else {
+      this.fogColor.copy(color);
+    }
+    this.fog.color.copy(this.fogColor);
+    this.fog.near = near;
+    this.fog.far = far;
+  }
 }

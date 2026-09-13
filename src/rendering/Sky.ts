@@ -19,7 +19,8 @@ export class Sky {
         offset: { value: 35 },
         exponent: { value: 0.65 },
         sunDirection: { value: new THREE.Vector3(0.5, 0.7, 0.4).normalize() },
-        sunColor: { value: new THREE.Color(0xfff7e6) }
+        sunColor: { value: new THREE.Color(0xfff7e6) },
+        cloudiness: { value: 0.0 }
       },
       vertexShader: `
         varying vec3 vWorldPosition;
@@ -37,19 +38,25 @@ export class Sky {
         uniform float exponent;
         uniform vec3 sunDirection;
         uniform vec3 sunColor;
+        uniform float cloudiness;
         varying vec3 vWorldPosition;
 
         void main() {
           float h = normalize(vWorldPosition + vec3(0.0, offset, 0.0)).y;
           float factor = max(0.0, h);
           
-          vec3 skyGrad = mix(bottomColor, midColor, smoothstep(0.0, 0.4, factor));
-          skyGrad = mix(skyGrad, topColor, smoothstep(0.4, 1.0, factor));
+          vec3 skyGrad = mix(bottomColor, midColor, smoothstep(0.0, 0.45, factor));
+          skyGrad = mix(skyGrad, topColor, smoothstep(0.45, 1.0, factor));
 
-          // Subtle sun flare glow
+          // Soften sky contrast during overcast/rainy weather
+          vec3 overcastTint = mix(skyGrad, bottomColor * 0.95, cloudiness * 0.65);
+          skyGrad = mix(skyGrad, overcastTint, cloudiness);
+
+          // Subtle sun flare glow (dimmed by clouds)
           vec3 dir = normalize(vWorldPosition);
           float sunDot = max(0.0, dot(dir, sunDirection));
-          float sunGlow = pow(sunDot, 120.0) * 0.75 + pow(sunDot, 8.0) * 0.18;
+          float flareStrength = 1.0 - cloudiness * 0.85;
+          float sunGlow = (pow(sunDot, 120.0) * 0.75 + pow(sunDot, 8.0) * 0.18) * flareStrength;
           vec3 finalColor = skyGrad + sunColor * sunGlow;
 
           gl_FragColor = vec4(finalColor, 1.0);
@@ -61,6 +68,30 @@ export class Sky {
 
     this.mesh = new THREE.Mesh(geometry, this.material);
     this.mesh.renderOrder = -100;
+  }
+
+  public setSkyColors(
+    top: THREE.Color | number,
+    mid: THREE.Color | number,
+    bottom: THREE.Color | number,
+    cloudiness: number = 0,
+    sunColor?: THREE.Color | number
+  ): void {
+    if (typeof top === 'number') this.material.uniforms.topColor.value.setHex(top);
+    else this.material.uniforms.topColor.value.copy(top);
+
+    if (typeof mid === 'number') this.material.uniforms.midColor.value.setHex(mid);
+    else this.material.uniforms.midColor.value.copy(mid);
+
+    if (typeof bottom === 'number') this.material.uniforms.bottomColor.value.setHex(bottom);
+    else this.material.uniforms.bottomColor.value.copy(bottom);
+
+    this.material.uniforms.cloudiness.value = cloudiness;
+
+    if (sunColor !== undefined) {
+      if (typeof sunColor === 'number') this.material.uniforms.sunColor.value.setHex(sunColor);
+      else this.material.uniforms.sunColor.value.copy(sunColor);
+    }
   }
 
   public setSunDirection(sunDir: THREE.Vector3): void {

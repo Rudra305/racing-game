@@ -28,6 +28,10 @@ import { VehicleDefinition } from '../vehicles/VehicleDefinition';
 import { VehicleCustomization } from '../vehicles/VehicleCustomization';
 import { VehicleRegistry } from '../vehicles/VehicleRegistry';
 import { AudioManager } from '../audio/AudioManager';
+import { WeatherManager } from '../environment/WeatherManager';
+import { WeatherType, WeatherProfile } from '../environment/WeatherTypes';
+import { RainSystem } from '../rendering/RainSystem';
+import { TireSpraySystem } from '../rendering/TireSpraySystem';
 
 export class Game {
   // Systems
@@ -39,6 +43,9 @@ export class Game {
   private sceneManager!: SceneManager;
   private cameraManager!: CameraManager;
   private audioManager!: AudioManager;
+  private weatherManager!: WeatherManager;
+  private rainSystem!: RainSystem;
+  private tireSpraySystem!: TireSpraySystem;
   private trackManager!: TrackManager;
   private track!: Track;
   private trackDebugRenderer!: TrackDebugRenderer;
@@ -80,10 +87,36 @@ export class Game {
     this.cameraManager = new CameraManager(GAME_CONFIG.camera);
     this.audioManager = new AudioManager();
 
+    // 2b. Weather, Rain & Spray Particle Subsystems
+    let savedWeather = WeatherType.CLEAR;
+    let isWeatherCycle = false;
+    try {
+      const savedW = localStorage.getItem('racingGame.weather');
+      if (savedW === 'CYCLE') {
+        isWeatherCycle = true;
+      } else if (savedW && Object.values(WeatherType).includes(savedW as WeatherType)) {
+        savedWeather = savedW as WeatherType;
+      }
+    } catch {}
+
+    this.weatherManager = new WeatherManager(savedWeather);
+    this.weatherManager.isCycleEnabled = isWeatherCycle;
+
+    this.rainSystem = new RainSystem(3500);
+    this.sceneManager.add(this.rainSystem.points);
+
+    this.tireSpraySystem = new TireSpraySystem(400);
+    this.sceneManager.add(this.tireSpraySystem.points);
+
     // 3. Track Generation & Insertion via TrackManager
     this.trackManager = new TrackManager();
     this.track = this.trackManager.loadTrack('alpine-circuit');
     this.sceneManager.add(this.track.group);
+
+    // Bind weather listener now that track and scene are ready
+    this.weatherManager.onUpdate((profile) => {
+      this.applyWeatherProfile(profile);
+    });
 
     // Track Debug Visualizer (F3 / K to toggle)
     this.trackDebugRenderer = new TrackDebugRenderer(this.track);
@@ -220,12 +253,21 @@ export class Game {
       onAICountChanged: (count) => {
         this.changeAICount(count);
       },
+      onWeatherChanged: (weatherKey) => {
+        if (weatherKey === 'CYCLE') {
+          this.weatherManager.isCycleEnabled = true;
+        } else {
+          this.weatherManager.isCycleEnabled = false;
+          this.weatherManager.setWeather(weatherKey as WeatherType, false);
+        }
+      },
       onClosed: () => {
         canvas.focus();
       }
     });
     this.settingsModal.setAIDifficulty(initialDifficulty);
     this.settingsModal.setAICount(initialAICount);
+    this.settingsModal.setWeather(isWeatherCycle ? 'CYCLE' : savedWeather);
 
     this.hud.onGarageButtonClick(() => {
       this.openGarage();
@@ -381,7 +423,19 @@ export class Game {
       groundInfo.height
     );
 
-    // 2b. Update Reactive Web Audio Engine
+    // 2b. Update Weather Engine & Particle Dynamics
+    this.weatherManager.update(dt);
+    this.rainSystem.update(dt, this.cameraManager.camera.position, this.vehiclePhysics.forwardSpeed);
+
+    const activeVehicles: VehiclePhysics[] = [this.vehiclePhysics];
+    if (this.aiSystem && this.aiSystem.opponents) {
+      for (const opp of this.aiSystem.opponents) {
+        activeVehicles.push(opp.physics);
+      }
+    }
+    this.tireSpraySystem.update(dt, activeVehicles, this.weatherManager.activeProfile.roadWetness);
+
+    // 2c. Update Reactive Web Audio Engine (including procedural rain, tire spray & thunder)
     const isRaceActive = !this.garageManager.isOpen &&
                          !this.settingsModal.visible &&
                          (this.raceManager.state === RaceState.RACING || this.raceManager.state === RaceState.COUNTDOWN);
@@ -389,7 +443,10 @@ export class Game {
       this.vehiclePhysics.telemetry,
       this.vehiclePhysics.drivetrain.isShifting,
       dt,
-      isRaceActive
+      isRaceActive,
+      this.weatherManager.activeProfile.type,
+      this.weatherManager.activeProfile.rainAudioGain,
+      this.weatherManager.activeProfile.roadWetness
     );
 
     // 3. Update Shadow Camera Target
@@ -491,6 +548,7 @@ export class Game {
     this.aiSystem.registerWithPositionManager(this.raceManager.positionManager);
 
     for (const opp of this.aiSystem.opponents) {
+      opp.physics.surfaceSystem.wetGripModifier = this.weatherManager.activeProfile.wetGripModifier;
       this.sceneManager.add(opp.vehicle.group);
       this.physicsWorld.addAIVehicle(opp.physics);
     }
@@ -517,6 +575,7 @@ export class Game {
 
     // 3. Load new track
     this.track = this.trackManager.loadTrack(trackId);
+    this.track.setWetness(this.weatherManager.activeProfile.roadWetness);
     this.sceneManager.add(this.track.group);
 
     // 4. Rebind debug renderer
@@ -555,6 +614,7 @@ export class Game {
     this.aiSystem.registerWithPositionManager(this.raceManager.positionManager);
 
     for (const opp of this.aiSystem.opponents) {
+      opp.physics.surfaceSystem.wetGripModifier = this.weatherManager.activeProfile.wetGripModifier;
       this.sceneManager.add(opp.vehicle.group);
       this.physicsWorld.addAIVehicle(opp.physics);
     }
@@ -563,6 +623,45 @@ export class Game {
     // 10. Reset race state & start countdown
     this.hud.reset();
     this.restartRace();
+  }
+
+  /**
+   * Applies interpolated atmospheric, lighting, and surface properties from WeatherManager.
+   */
+  private applyWeatherProfile(profile: WeatherProfile): void {
+    if (!this.sceneManager || !this.track) return;
+
+    this.sceneManager.sky.setSkyColors(
+      profile.skyTopColor,
+      profile.skyMidColor,
+      profile.skyBottomColor,
+      profile.cloudiness,
+      profile.sunColor
+    );
+    this.sceneManager.atmosphere.setAtmosphere(
+      profile.fogColor,
+      profile.fogNear,
+      profile.fogFar
+    );
+    this.sceneManager.lighting.setLighting(
+      profile.sunColor,
+      profile.sunIntensity,
+      profile.skyColor,
+      profile.groundColor,
+      profile.ambientIntensity
+    );
+    this.track.setWetness(profile.roadWetness);
+
+    if (this.vehiclePhysics) {
+      this.vehiclePhysics.surfaceSystem.wetGripModifier = profile.wetGripModifier;
+    }
+    if (this.aiSystem && this.aiSystem.opponents) {
+      for (const opp of this.aiSystem.opponents) {
+        opp.physics.surfaceSystem.wetGripModifier = profile.wetGripModifier;
+      }
+    }
+
+    this.rainSystem.setIntensity(profile.rainIntensity, profile.rainParticleCount);
   }
 
   private onWindowResize(): void {
@@ -575,6 +674,8 @@ export class Game {
     this.gameLoop.stop();
     this.inputManager.destroy();
     this.renderer.destroy();
+    this.rainSystem.dispose();
+    this.tireSpraySystem.dispose();
     this.environmentManager.dispose();
     this.assetManager.dispose();
     this.aiSystem.dispose();
