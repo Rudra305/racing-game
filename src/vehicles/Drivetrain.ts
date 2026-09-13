@@ -9,6 +9,7 @@ export class Drivetrain {
   public isShifting: boolean = false;
   private shiftTimer: number = 0;
   private isReverseActive: boolean = false;
+  public onShift?: (fromGear: number, toGear: number, isUpshift: boolean) => void;
 
   constructor(config: VehicleConfig) {
     this.config = config;
@@ -81,10 +82,11 @@ export class Drivetrain {
     // Engine RPM matching wheel rotation through drivetrain
     const mechanicalRPM = (wheelAngSpeed * gearRatio * trans.finalDrive * 60) / (2 * Math.PI);
 
+    // Clutch slip zone: engine revs up into powerband based on throttle
     let targetRPM = mechanicalRPM;
     if (absSpeed < 3.5) {
-      // Clutch slip zone: engine revs up into powerband based on throttle
-      const clutchSlipRPM = eng.idleRPM + throttle * (3800 - eng.idleRPM);
+      const slipSpan = Math.max(1200, Math.min(3600, (eng.redlineRPM - eng.idleRPM) * 0.38));
+      const clutchSlipRPM = eng.idleRPM + throttle * slipSpan;
       targetRPM = Math.max(mechanicalRPM, clutchSlipRPM);
     } else if (this.isShifting) {
       targetRPM = mechanicalRPM * 0.85;
@@ -108,11 +110,13 @@ export class Drivetrain {
         this.currentGear < trans.gears &&
         throttle > 0.2
       ) {
+        const prevGear = this.currentGear;
         this.currentGear++;
         this.isShifting = true;
         this.shiftTimer = trans.shiftTime;
         // Drop RPM after upshift
         this.currentRPM *= 0.74;
+        if (this.onShift) this.onShift(prevGear, this.currentGear, true);
       }
       // Downshift check
       else if (
@@ -121,11 +125,13 @@ export class Drivetrain {
       ) {
         const lowerGearMinSpeed = this.getMinSpeedForGear(this.currentGear - 1);
         if (absSpeed <= lowerGearMinSpeed * 1.1) {
+          const prevGear = this.currentGear;
           this.currentGear--;
           this.isShifting = true;
           this.shiftTimer = trans.shiftTime * 0.75;
           // Blip RPM on downshift
           this.currentRPM = Math.min(eng.maxRPM, this.currentRPM * 1.30);
+          if (this.onShift) this.onShift(prevGear, this.currentGear, false);
         }
       }
     }

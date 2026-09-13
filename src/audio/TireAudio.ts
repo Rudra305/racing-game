@@ -107,8 +107,9 @@ export class TireAudio {
     this.bandpassFilter.frequency.setTargetAtTime(targetFreq, t, 0.04);
     this.bandpassFilter.Q.setTargetAtTime(targetQ, t, 0.04);
 
-    // 3. Target Gain
-    const targetGain = Math.min(0.9, slipIntensity * 0.75);
+    // 3. Target Gain (combining active tire scrubbing/screech and high-speed rolling road hiss)
+    const roadHissGain = speedKmH > 25.0 ? Math.min(0.08, (speedKmH / 220.0) * 0.08) : 0;
+    const targetGain = Math.min(0.9, slipIntensity * 0.75 + roadHissGain);
     this.tireGain.gain.setTargetAtTime(targetGain, t, 0.03);
   }
 

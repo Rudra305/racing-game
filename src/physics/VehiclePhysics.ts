@@ -28,6 +28,7 @@ export interface VehicleTelemetry {
   gradient: number;
   banking: number;
   trackDistance: number;
+  handbrake: boolean;
 }
 
 export class VehiclePhysics {
@@ -375,7 +376,8 @@ export class VehiclePhysics {
       elevation: this.groundElevation,
       gradient: Math.tan(this.roadPitchAngle) * 100,
       banking: THREE.MathUtils.radToDeg(this.roadBankAngle),
-      trackDistance: this.trackDistance
+      trackDistance: this.trackDistance,
+      handbrake: this.handbrakeInput
     };
   }
 

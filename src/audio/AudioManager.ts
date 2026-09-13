@@ -116,6 +116,40 @@ export class AudioManager {
     }
   }
 
+  public setVehicleProfile(vehicleIdOrCategory: string): void {
+    if (this.isInitialized && this.engineAudio) {
+      this.engineAudio.setVehicleProfile(vehicleIdOrCategory);
+    }
+  }
+
+  public triggerGearShift(isUpshift: boolean): void {
+    if (!this.isInitialized || !this.ctx || this.ctx.state !== 'running') return;
+    try {
+      const t = this.ctx.currentTime;
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      const filter = this.ctx.createBiquadFilter();
+
+      filter.type = isUpshift ? 'bandpass' : 'lowpass';
+      filter.frequency.value = isUpshift ? 240 : 180;
+      filter.Q.value = 2.0;
+
+      osc.type = isUpshift ? 'triangle' : 'sine';
+      osc.frequency.setValueAtTime(isUpshift ? 180 : 130, t);
+      osc.frequency.exponentialRampToValueAtTime(40, t + 0.045);
+
+      gain.gain.setValueAtTime(0.18, t);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + 0.05);
+
+      osc.connect(filter);
+      filter.connect(gain);
+      gain.connect(this.compressor);
+
+      osc.start(t);
+      osc.stop(t + 0.055);
+    } catch {}
+  }
+
   public triggerImpact(severity: number): void {
     if (this.isInitialized && this.collisionAudio) {
       this.collisionAudio.triggerImpact(severity);
@@ -197,7 +231,7 @@ export class AudioManager {
       telemetry.driftAngle,
       telemetry.speedKmH,
       telemetry.brake,
-      false,
+      telemetry.handbrake ?? false,
       telemetry.surface
     );
 

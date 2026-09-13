@@ -107,17 +107,17 @@ export class PhysicsWorld {
     // 3. Inter-Vehicle 2D Horizontal Collision Detection & Resolution
     const allCars: VehiclePhysics[] = [this.vehiclePhysics, ...this.aiVehicles];
     const n = allCars.length;
-    const carRadius = 1.18; // Effective horizontal collision radius (~2.36m car-to-car clearance)
-    const minDist = carRadius * 2;
-    const minDistSq = minDist * minDist;
-
     for (let i = 0; i < n; i++) {
       const carA = allCars[i];
       const posA = carA.position;
+      const radiusA = Math.max(1.15, (carA.config.dimensions?.length ?? 4.4) * 0.30);
 
       for (let j = i + 1; j < n; j++) {
         const carB = allCars[j];
         const posB = carB.position;
+        const radiusB = Math.max(1.15, (carB.config.dimensions?.length ?? 4.4) * 0.30);
+        const minDist = radiusA + radiusB;
+        const minDistSq = minDist * minDist;
 
         const dx = posB.x - posA.x;
         const dz = posB.z - posA.z;

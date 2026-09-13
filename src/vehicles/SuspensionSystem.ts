@@ -65,7 +65,16 @@ export class SuspensionSystem {
     const susp = cfg.suspension;
     const totalMass = cfg.mass;
     const g = 9.81;
-    const baseWheelLoad = (totalMass * g) / 4;
+
+    // Aerodynamic Downforce: F_df = 0.5 * rho * C_df * A_frontal * v^2
+    const speedMs = speedKmH / 3.6;
+    const airDensity = 1.225;
+    const downforceCoeff = cfg.aerodynamics?.downforceCoefficient ?? 0.4;
+    const frontalArea = cfg.aerodynamics?.frontalArea ?? 2.0;
+    const totalDownforce = 0.5 * airDensity * downforceCoeff * frontalArea * (speedMs * speedMs);
+    const downforcePerWheel = totalDownforce / 4;
+
+    const baseWheelLoad = (totalMass * g) / 4 + downforcePerWheel;
 
     if (isAirborne) {
       // Vehicle in air: suspension extends toward rest limits, load goes to zero

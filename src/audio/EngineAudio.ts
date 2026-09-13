@@ -9,6 +9,7 @@ export interface EngineAudioProfile {
 }
 
 const ENGINE_PROFILES: Record<string, EngineAudioProfile> = {
+  // Category fallbacks
   [VehicleCategory.SPORTS]: {
     cylinders: 6,
     baseFrequencyMultiplier: 1.0,
@@ -17,9 +18,9 @@ const ENGINE_PROFILES: Record<string, EngineAudioProfile> = {
     distortionAmount: 18.0
   },
   [VehicleCategory.SUPERCAR]: {
-    cylinders: 12,
+    cylinders: 10,
     baseFrequencyMultiplier: 1.25,
-    idlePitchHz: 45.0,
+    idlePitchHz: 44.0,
     harmonicGains: [0.45, 0.40, 0.35, 0.25],
     distortionAmount: 26.0
   },
@@ -33,16 +34,95 @@ const ENGINE_PROFILES: Record<string, EngineAudioProfile> = {
   [VehicleCategory.SUV]: {
     cylinders: 8,
     baseFrequencyMultiplier: 0.85,
-    idlePitchHz: 26.0,
+    idlePitchHz: 25.0,
     harmonicGains: [0.70, 0.30, 0.15, 0.05],
-    distortionAmount: 14.0
+    distortionAmount: 16.0
   },
   [VehicleCategory.FORMULA]: {
     cylinders: 6,
-    baseFrequencyMultiplier: 1.85,
-    idlePitchHz: 65.0,
+    baseFrequencyMultiplier: 1.95,
+    idlePitchHz: 68.0,
     harmonicGains: [0.35, 0.45, 0.40, 0.35],
-    distortionAmount: 40.0
+    distortionAmount: 42.0
+  },
+
+  // Vehicle-specific authentic acoustic profiles
+  'sports_porsche_930': {
+    cylinders: 6,
+    baseFrequencyMultiplier: 1.05,
+    idlePitchHz: 34.0,
+    harmonicGains: [0.58, 0.38, 0.22, 0.12],
+    distortionAmount: 22.0
+  },
+  'sports_toyota_supra_rz': {
+    cylinders: 6,
+    baseFrequencyMultiplier: 0.98,
+    idlePitchHz: 30.0,
+    harmonicGains: [0.52, 0.42, 0.26, 0.14],
+    distortionAmount: 20.0
+  },
+  'sports_toyota_gr_supra': {
+    cylinders: 6,
+    baseFrequencyMultiplier: 1.02,
+    idlePitchHz: 28.0,
+    harmonicGains: [0.54, 0.40, 0.28, 0.16],
+    distortionAmount: 24.0
+  },
+  'supercar_ferrari_296_gtb': {
+    cylinders: 6,
+    baseFrequencyMultiplier: 1.45,
+    idlePitchHz: 42.0,
+    harmonicGains: [0.42, 0.46, 0.38, 0.28],
+    distortionAmount: 30.0
+  },
+  'supercar_mclaren_765lt': {
+    cylinders: 8,
+    baseFrequencyMultiplier: 1.30,
+    idlePitchHz: 38.0,
+    harmonicGains: [0.48, 0.42, 0.34, 0.22],
+    distortionAmount: 28.0
+  },
+  'supercar_mclaren_f1': {
+    cylinders: 12,
+    baseFrequencyMultiplier: 1.25,
+    idlePitchHz: 48.0,
+    harmonicGains: [0.38, 0.46, 0.42, 0.32],
+    distortionAmount: 32.0
+  },
+  'rally_mitsubishi_evo_9': {
+    cylinders: 4,
+    baseFrequencyMultiplier: 0.98,
+    idlePitchHz: 32.0,
+    harmonicGains: [0.62, 0.28, 0.32, 0.16],
+    distortionAmount: 34.0
+  },
+  'rally_subaru_impreza_22b': {
+    cylinders: 4,
+    baseFrequencyMultiplier: 0.92,
+    idlePitchHz: 28.0,
+    harmonicGains: [0.66, 0.26, 0.28, 0.18],
+    distortionAmount: 30.0
+  },
+  'suv_ford_f150_raptor': {
+    cylinders: 8,
+    baseFrequencyMultiplier: 0.82,
+    idlePitchHz: 24.0,
+    harmonicGains: [0.72, 0.32, 0.14, 0.06],
+    distortionAmount: 24.0
+  },
+  'formula_mclaren_mcl35m': {
+    cylinders: 6,
+    baseFrequencyMultiplier: 1.95,
+    idlePitchHz: 68.0,
+    harmonicGains: [0.32, 0.46, 0.44, 0.36],
+    distortionAmount: 42.0
+  },
+  'formula_red_bull_f1': {
+    cylinders: 6,
+    baseFrequencyMultiplier: 1.98,
+    idlePitchHz: 70.0,
+    harmonicGains: [0.30, 0.48, 0.45, 0.38],
+    distortionAmount: 44.0
   }
 };
 
@@ -142,10 +222,14 @@ export class EngineAudio {
     this.masterEngineGain.connect(this.outputNode);
   }
 
-  public setCategory(category: string): void {
-    const profile = ENGINE_PROFILES[category] || ENGINE_PROFILES[VehicleCategory.SPORTS];
+  public setVehicleProfile(vehicleIdOrCategory: string): void {
+    const profile = ENGINE_PROFILES[vehicleIdOrCategory] || ENGINE_PROFILES[VehicleCategory.SPORTS];
     this.currentProfile = profile;
     this.waveshaperNode.curve = this.createDistortionCurve(profile.distortionAmount);
+  }
+
+  public setCategory(category: string): void {
+    this.setVehicleProfile(category);
   }
 
   public start(): void {

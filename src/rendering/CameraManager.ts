@@ -22,6 +22,7 @@ export class CameraManager {
   private shakeIntensity: number = 0;
   private shakePhase: number = 0;
   private smoothedAccel: number = 0;
+  private smoothedVehicleY: number = 0;
 
   // Zero runtime allocation scratch objects
   private readonly _idealPosition: THREE.Vector3 = new THREE.Vector3();
@@ -46,8 +47,9 @@ export class CameraManager {
   }
 
   /**
-   * Updates camera position with follow lag, acceleration reaction, curb rumble,
-   * impact shake, and speed-adaptive FOV. Zero allocations.
+   * Updates camera position with smooth follow lag, horizontal-only acceleration reaction,
+   * lateral impact feedback, and speed-adaptive FOV.
+   * Completely eliminates vertical procedural movement, suspension bob, curb shaking, and height kicks.
    */
   public update(
     delta: number,
@@ -62,34 +64,51 @@ export class CameraManager {
     this._forward.set(Math.sin(vehicleHeading), 0, Math.cos(vehicleHeading));
     this._right.set(Math.cos(vehicleHeading), 0, -Math.sin(vehicleHeading));
 
-    // 1. Dynamic Distance (Smoothed Horizontal Acceleration Setback / Forward Braking Push)
-    // Stable horizontal camera lag without modifying vertical height
-    this.smoothedAccel += (acceleration - this.smoothedAccel) * Math.min(1.0, 10.0 * delta);
-    const accelSetback = Math.max(-0.40, Math.min(0.55, this.smoothedAccel * 0.025));
+    // 1. Dynamic Distance (Purely Horizontal Acceleration Setback / Forward Braking Push)
+    // Zero vertical displacement: strictly along forward vector
+    this.smoothedAccel += (acceleration - this.smoothedAccel) * Math.min(1.0, 8.0 * delta);
+    const accelSetback = Math.max(-0.35, Math.min(0.45, this.smoothedAccel * 0.022));
     const effectiveDistance = this.config.distance + accelSetback;
-    // Strict constant vertical height relative to vehicle: NO acceleration-driven vertical displacement
     const effectiveHeight = this.config.height;
-
-    // 2. Compute Ideal Camera Position (Stable Height)
-    this._idealPosition.copy(vehiclePosition);
-    this._idealPosition.x -= this._forward.x * effectiveDistance;
-    this._idealPosition.z -= this._forward.z * effectiveDistance;
-    this._idealPosition.y += effectiveHeight;
-
-    // 3. Compute Ideal Look-At Point (Ahead over the vehicle hood at constant relative elevation)
-    this._idealLookAt.copy(vehiclePosition);
-    this._idealLookAt.x += this._forward.x * this.config.lookAhead;
-    this._idealLookAt.z += this._forward.z * this.config.lookAhead;
-    this._idealLookAt.y += 0.85;
 
     // First frame initialization
     if (!this.isInitialized) {
+      this.smoothedVehicleY = vehiclePosition.y;
+      this._idealPosition.set(
+        vehiclePosition.x - this._forward.x * effectiveDistance,
+        this.smoothedVehicleY + effectiveHeight,
+        vehiclePosition.z - this._forward.z * effectiveDistance
+      );
+      this._idealLookAt.set(
+        vehiclePosition.x + this._forward.x * this.config.lookAhead,
+        this.smoothedVehicleY + 0.85,
+        vehiclePosition.z + this._forward.z * this.config.lookAhead
+      );
       this.camera.position.copy(this._idealPosition);
       this.currentLookAt.copy(this._idealLookAt);
       this.camera.lookAt(this.currentLookAt);
       this.isInitialized = true;
       return;
     }
+
+    // 2. Heavily Damped Macro Altitude Tracking
+    // Isolates camera completely from high-frequency road bumps, curbs, squat, and suspension dive.
+    // Follows long-range hill gradients smoothly at ~2.8/s without any vertical bobbing.
+    const yBlend = 1.0 - Math.exp(-2.8 * delta);
+    this.smoothedVehicleY += (vehiclePosition.y - this.smoothedVehicleY) * yBlend;
+
+    // 3. Compute Ideal Camera Position & Look-At (Stable Constant Height)
+    this._idealPosition.set(
+      vehiclePosition.x - this._forward.x * effectiveDistance,
+      this.smoothedVehicleY + effectiveHeight,
+      vehiclePosition.z - this._forward.z * effectiveDistance
+    );
+
+    this._idealLookAt.set(
+      vehiclePosition.x + this._forward.x * this.config.lookAhead,
+      this.smoothedVehicleY + 0.85,
+      vehiclePosition.z + this._forward.z * this.config.lookAhead
+    );
 
     // 4. Exponential Damping (Smooth follow without jitter)
     const posAlpha = 1 - Math.exp(-this.config.positionDamping * delta);
@@ -98,23 +117,23 @@ export class CameraManager {
     this.camera.position.lerp(this._idealPosition, posAlpha);
     this.currentLookAt.lerp(this._idealLookAt, lookAlpha);
 
-    // 5. Impact Feedback (Horizontal Only — ZERO Vertical Shake)
-    // Curbs and vehicle bounce produce NO camera shake; impact shake is purely lateral
+    // 5. Impact Feedback (Strictly Lateral Horizontal Only — ZERO Vertical Displacement)
     if (this.shakeIntensity > 0.01) {
-      this.shakePhase += delta * 24.0;
-      const shakeH = Math.sin(this.shakePhase) * this.shakeIntensity * 0.035;
+      this.shakePhase += delta * 22.0;
+      const shakeH = Math.sin(this.shakePhase) * this.shakeIntensity * 0.030;
       this.camera.position.x += this._right.x * shakeH;
       this.camera.position.z += this._right.z * shakeH;
-      // Absolute rule: NEVER modify camera.position.y with shake or curb vibration
+      // Absolute invariant: camera.position.y is NEVER perturbed by shake or rumble
     }
 
     // Decay impact shake
     this.shakeIntensity *= Math.exp(-6.5 * delta);
 
-    // 6. Camera Collision & Ground Clipping Prevention
-    const safetyFloor = minGroundY + 0.8;
+    // 6. Camera Collision & Ground Clipping Prevention (Smooth Soft-Floor Clamping)
+    const safetyFloor = minGroundY + 0.75;
     if (this.camera.position.y < safetyFloor) {
-      this.camera.position.y = THREE.MathUtils.lerp(this.camera.position.y, safetyFloor, 0.25);
+      const floorBlend = 1.0 - Math.exp(-5.0 * delta);
+      this.camera.position.y += (safetyFloor - this.camera.position.y) * floorBlend;
     }
 
     this.camera.lookAt(this.currentLookAt);
@@ -128,20 +147,23 @@ export class CameraManager {
   }
 
   /**
-   * Resets camera instantaneously behind vehicle (e.g. on respawn)
+   * Resets camera instantaneously behind vehicle (e.g. on respawn or race start)
    */
   public resetToVehicle(vehiclePosition: THREE.Vector3, vehicleHeading: number): void {
     this._forward.set(Math.sin(vehicleHeading), 0, Math.cos(vehicleHeading));
+    this.smoothedVehicleY = vehiclePosition.y;
 
-    this.camera.position.copy(vehiclePosition);
-    this.camera.position.x -= this._forward.x * this.config.distance;
-    this.camera.position.z -= this._forward.z * this.config.distance;
-    this.camera.position.y += this.config.height;
+    this.camera.position.set(
+      vehiclePosition.x - this._forward.x * this.config.distance,
+      this.smoothedVehicleY + this.config.height,
+      vehiclePosition.z - this._forward.z * this.config.distance
+    );
 
-    this.currentLookAt.copy(vehiclePosition);
-    this.currentLookAt.x += this._forward.x * this.config.lookAhead;
-    this.currentLookAt.z += this._forward.z * this.config.lookAhead;
-    this.currentLookAt.y += 0.85;
+    this.currentLookAt.set(
+      vehiclePosition.x + this._forward.x * this.config.lookAhead,
+      this.smoothedVehicleY + 0.85,
+      vehiclePosition.z + this._forward.z * this.config.lookAhead
+    );
 
     this.camera.lookAt(this.currentLookAt);
     this.camera.fov = this.config.minFov;

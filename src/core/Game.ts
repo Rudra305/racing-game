@@ -123,7 +123,10 @@ export class Game {
     const savedCar = this.garageManager.getSelectedVehicle();
     this.vehiclePhysics = new VehiclePhysics(savedCar.definition.config);
     this.vehiclePhysics.setSpawn(playerSlot.position, playerSlot.heading);
-    this.audioManager.setCategory(savedCar.definition.category);
+    this.vehiclePhysics.drivetrain.onShift = (_fromGear, _toGear, isUpshift) => {
+      this.audioManager.triggerGearShift(isUpshift);
+    };
+    this.audioManager.setVehicleProfile(savedCar.definition.id);
 
     this.vehicle = new Vehicle(savedCar.definition, savedCar.customization);
     this.vehicle.syncWithPhysics(this.vehiclePhysics);
@@ -598,8 +601,11 @@ export class Game {
 
   public applyPlayerVehicle(def: VehicleDefinition, cust: VehicleCustomization): void {
     this.vehiclePhysics.setConfig(def.config);
+    this.vehiclePhysics.drivetrain.onShift = (_fromGear, _toGear, isUpshift) => {
+      this.audioManager.triggerGearShift(isUpshift);
+    };
     this.vehicle.setDefinition(def, cust);
     this.cameraManager.resetToVehicle(this.vehiclePhysics.position, this.vehiclePhysics.heading);
-    this.audioManager.setCategory(def.category);
+    this.audioManager.setVehicleProfile(def.id);
   }
 }

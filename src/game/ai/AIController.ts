@@ -121,24 +121,24 @@ export class AIController {
       dt
     );
 
-    // 6. Dynamic speed control along precomputed racing envelope
+    // 6. Dynamic speed control along racing line scaled with vehicle's actual grip physics
     const localPoint = racingLine.getPointAtDistance(physics.trackDistance);
+    const carGripRatio = (physics.config.handling?.baseGrip ?? 28.0) / 28.0;
+    let envelopeSpeed = localPoint.targetSpeed * Math.sqrt(carGripRatio);
 
-    // In Hard/Expert, cars brake at the true physical threshold without premature crawling.
-    // In Easy/Normal, cars anticipate corner entry with modest driver margin.
-    let envelopeSpeed = localPoint.targetSpeed;
-    if (profile.brakingDistanceMultiplier > 1.05) {
-      const marginDist = Math.min(16.0, Math.abs(physics.forwardSpeed) * 0.40 * (profile.brakingDistanceMultiplier - 1.0));
+    // Driver skill braking anticipation:
+    // Earlier braking anticipation on easier difficulties; threshold braking on Hard/Expert
+    if (profile.brakingDistanceMultiplier > 1.0) {
+      const marginDist = Math.min(24.0, Math.abs(physics.forwardSpeed) * 0.45 * (profile.brakingDistanceMultiplier - 1.0));
       const lookaheadPoint = racingLine.getPointAtDistance(physics.trackDistance + marginDist);
-      envelopeSpeed = Math.min(envelopeSpeed, lookaheadPoint.targetSpeed);
+      envelopeSpeed = Math.min(envelopeSpeed, lookaheadPoint.targetSpeed * Math.sqrt(carGripRatio));
     }
 
-    const scaledTargetSpeed = envelopeSpeed * profile.targetSpeedFactor * avoidanceOut.speedMultiplier;
-    const cappedTargetSpeed = Math.min(profile.maxSpeedCapMs, scaledTargetSpeed);
+    const targetSpeed = envelopeSpeed * profile.targetSpeedFactor * avoidanceOut.speedMultiplier;
 
     const speedControls = this.speedController.computeControls(
       physics.forwardSpeed,
-      cappedTargetSpeed,
+      targetSpeed,
       profile.brakingAggression,
       physics.isOffRoad,
       dt

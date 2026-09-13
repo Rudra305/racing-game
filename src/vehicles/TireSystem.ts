@@ -119,18 +119,23 @@ export class TireSystem {
     }
 
     // Linear-to-saturation tire cornering forces
-    // Guard against division-by-zero when wheels are airborne/unweighted (fzTotal <= 1.0)
-    const muTire = 1.15;
+    // Dynamic normal force (static weight + dynamic weight transfer + aerodynamic downforce)
+    const muTire = 1.18;
     let maxLatFront = 0;
     let maxLatRear = 0;
+    let corneringStiffnessFront = frontGripFactor * 450;
+    let corneringStiffnessRear = rearGripFactor * 450;
 
     if (fzTotal > 1.0) {
-      maxLatFront = (fzFront / fzTotal) * (cfg.mass * 9.81 * muTire * surfaceGrip);
-      maxLatRear = (fzRear / fzTotal) * (cfg.mass * 9.81 * muTire * surfaceGrip);
+      maxLatFront = fzFront * muTire * surfaceGrip;
+      maxLatRear = fzRear * muTire * surfaceGrip;
+      const staticAxleLoad = (cfg.mass * 9.81) * 0.5;
+      corneringStiffnessFront *= Math.max(0.6, fzFront / staticAxleLoad);
+      corneringStiffnessRear *= Math.max(0.6, fzRear / staticAxleLoad);
     }
 
-    const latForceFront = -Math.sign(alphaFront) * Math.min(maxLatFront, Math.abs(alphaFront) * frontGripFactor * 450);
-    const latForceRear = -Math.sign(alphaRear) * Math.min(maxLatRear, Math.abs(alphaRear) * rearGripFactor * 450);
+    const latForceFront = -Math.sign(alphaFront) * Math.min(maxLatFront, Math.abs(alphaFront) * corneringStiffnessFront);
+    const latForceRear = -Math.sign(alphaRear) * Math.min(maxLatRear, Math.abs(alphaRear) * corneringStiffnessRear);
 
     const totalLateralForce = latForceFront + latForceRear;
 
