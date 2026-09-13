@@ -213,11 +213,17 @@ export class SettingsModal {
 
     this.aiCountSelect.addEventListener('change', () => {
       const count = parseInt(this.aiCountSelect.value, 10);
+      try {
+        localStorage.setItem('racingGame.aiCount', count.toString());
+      } catch {}
       this.callbacks.onAICountChanged?.(count);
     });
 
     this.aiDifficultySelect.addEventListener('change', () => {
       const diff = this.aiDifficultySelect.value as AIDifficultyLevel;
+      try {
+        localStorage.setItem('racingGame.aiDifficulty', diff);
+      } catch {}
       this.callbacks.onAIDifficultyChanged?.(diff);
     });
 
@@ -279,6 +285,18 @@ export class SettingsModal {
     }
   }
 
+  public setAIDifficulty(diff: AIDifficultyLevel): void {
+    if (this.aiDifficultySelect) {
+      this.aiDifficultySelect.value = diff;
+    }
+  }
+
+  public setAICount(count: number): void {
+    if (this.aiCountSelect) {
+      this.aiCountSelect.value = count.toString();
+    }
+  }
+
   public syncFromSettings(): void {
     const s = this.steeringSystem.settings;
     if (this.sensitivitySlider) {
@@ -295,6 +313,17 @@ export class SettingsModal {
     if (this.presetSelect) {
       this.presetSelect.value = s.preset;
     }
+
+    try {
+      const savedDiff = localStorage.getItem('racingGame.aiDifficulty');
+      if (savedDiff && this.aiDifficultySelect) {
+        this.aiDifficultySelect.value = savedDiff;
+      }
+      const savedCount = localStorage.getItem('racingGame.aiCount');
+      if (savedCount && this.aiCountSelect) {
+        this.aiCountSelect.value = savedCount;
+      }
+    } catch {}
   }
 
   public toggle(): boolean {

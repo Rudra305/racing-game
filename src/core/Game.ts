@@ -20,6 +20,7 @@ import { EnvironmentManager } from '../environment/EnvironmentManager';
 import { BiomeType } from '../environment/EnvironmentTypes';
 import { RaceManager } from '../game/race/RaceManager';
 import { RaceState } from '../game/race/RaceState';
+import { RaceEventType } from '../game/race/RaceEvents';
 import { AISystem } from '../game/ai/AISystem';
 import { AIDifficultyLevel, DEFAULT_RACE_CONFIG } from '../game/race/RaceConfig';
 import { GarageManager } from '../ui/garage/GarageManager';
@@ -107,10 +108,12 @@ export class Game {
     const garageOverlay = document.getElementById('garage-overlay') as HTMLElement;
     this.garageManager = new GarageManager(garageOverlay, {
       onStartRace: (def, cust) => {
+        this.audioManager.stopWorkshopMusic();
         this.applyPlayerVehicle(def, cust);
         this.restartRace();
       },
       onClose: () => {
+        this.audioManager.stopWorkshopMusic();
         canvas.focus();
       }
     });
@@ -138,16 +141,47 @@ export class Game {
     this.cameraManager.resetToVehicle(this.vehiclePhysics.position, this.vehiclePhysics.heading);
 
     // 7. Race System & AI Opponents (Phase 5 & 7)
+    let initialDifficulty = AIDifficultyLevel.NORMAL;
+    let initialAICount = DEFAULT_RACE_CONFIG.aiCount;
+    try {
+      const savedDiff = localStorage.getItem('racingGame.aiDifficulty') as AIDifficultyLevel;
+      if (savedDiff && Object.values(AIDifficultyLevel).includes(savedDiff)) {
+        initialDifficulty = savedDiff;
+      }
+      const savedCount = localStorage.getItem('racingGame.aiCount');
+      if (savedCount) {
+        const parsedCount = parseInt(savedCount, 10);
+        if (!isNaN(parsedCount) && parsedCount >= 1 && parsedCount <= 7) {
+          initialAICount = parsedCount;
+        }
+      }
+    } catch {}
+
     this.raceManager = new RaceManager(this.track, {
       laps: GAME_CONFIG.race.totalLaps,
-      aiCount: DEFAULT_RACE_CONFIG.aiCount,
+      aiCount: initialAICount,
       countdownDuration: 3.0,
-      difficulty: AIDifficultyLevel.NORMAL,
+      difficulty: initialDifficulty,
       allowRestart: true,
       rubberBanding: { enabled: false, strength: 0 }
     });
 
-    this.aiSystem = new AISystem(this.track, DEFAULT_RACE_CONFIG.aiCount, AIDifficultyLevel.NORMAL, GAME_CONFIG.race.totalLaps);
+    // Connect Race Event Audio Cues
+    this.raceManager.events.on(RaceEventType.COUNTDOWN_TICK, (data: { text: string; isGo: boolean }) => {
+      this.audioManager.triggerCountdownBeep(data.isGo);
+    });
+
+    this.raceManager.events.on(RaceEventType.LAP_COMPLETED, (data: { isPlayer: boolean }) => {
+      if (data.isPlayer) {
+        this.audioManager.triggerLapChime();
+      }
+    });
+
+    this.raceManager.events.on(RaceEventType.RACE_FINISHED, () => {
+      this.audioManager.triggerRaceFinish();
+    });
+
+    this.aiSystem = new AISystem(this.track, initialAICount, initialDifficulty, GAME_CONFIG.race.totalLaps);
     this.aiSystem.spawnOnGrid(this.track.startGrid);
     this.aiSystem.registerWithPositionManager(this.raceManager.positionManager);
 
@@ -187,6 +221,8 @@ export class Game {
         canvas.focus();
       }
     });
+    this.settingsModal.setAIDifficulty(initialDifficulty);
+    this.settingsModal.setAICount(initialAICount);
 
     this.hud.onGarageButtonClick(() => {
       this.openGarage();
@@ -243,6 +279,7 @@ export class Game {
 
     if (this.inputManager.consumeToggleSettings()) {
       if (this.garageManager.isOpen) {
+        this.audioManager.stopWorkshopMusic();
         this.garageManager.close();
       } else {
         this.settingsModal.toggle();
@@ -342,9 +379,14 @@ export class Game {
     );
 
     // 2b. Update Reactive Web Audio Engine
+    const isRaceActive = !this.garageManager.isOpen &&
+                         !this.settingsModal.visible &&
+                         (this.raceManager.state === RaceState.RACING || this.raceManager.state === RaceState.COUNTDOWN);
     this.audioManager.update(
       this.vehiclePhysics.telemetry,
-      this.vehiclePhysics.drivetrain.isShifting
+      this.vehiclePhysics.drivetrain.isShifting,
+      dt,
+      isRaceActive
     );
 
     // 3. Update Shadow Camera Target
@@ -541,11 +583,13 @@ export class Game {
     if (this.settingsModal.visible) {
       this.settingsModal.hide();
     }
+    this.audioManager.playWorkshopMusic();
     this.garageManager.open();
   }
 
   public toggleGarage(): void {
     if (this.garageManager.isOpen) {
+      this.audioManager.stopWorkshopMusic();
       this.garageManager.close();
     } else {
       this.openGarage();

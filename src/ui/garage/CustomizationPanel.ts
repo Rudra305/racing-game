@@ -1,10 +1,11 @@
-import { VehicleCustomization, WheelStyleId } from '../../vehicles/VehicleCustomization';
+import { VehicleCustomization } from '../../vehicles/VehicleCustomization';
+import { VehicleCustomizationCapabilities } from '../../vehicles/VehicleDefinition';
 
 const COLOR_SWATCHES = {
   primary: [
-    { label: 'Apex Blue', hex: 0x1f6feb },
-    { label: 'Crimson Red', hex: 0xd73a49 },
+    { label: 'Guards Red', hex: 0xd73a49 },
     { label: 'Speed Yellow', hex: 0xd29922 },
+    { label: 'Apex Blue', hex: 0x1f6feb },
     { label: 'Emerald Green', hex: 0x238636 },
     { label: 'Stealth Onyx', hex: 0x161b22 },
     { label: 'Glacier White', hex: 0xf0f6fc },
@@ -20,29 +21,24 @@ const COLOR_SWATCHES = {
   accent: [
     { label: 'Cyan Electric', hex: 0x58a6ff },
     { label: 'Hyperion Gold', hex: 0xe3b341 },
-    { label: 'Neon Crimson', hex: 0xf85149 },
+    { label: 'Brembo Crimson', hex: 0xf85149 },
     { label: 'Acid Lime', hex: 0x3fb950 },
     { label: 'Ghost Silver', hex: 0xc9d1d9 }
   ],
-  rim: [
-    { label: 'Silver Alloy', hex: 0xc9d1d9 },
-    { label: 'Gloss Black', hex: 0x161b22 },
-    { label: 'Race Bronze', hex: 0x9a6700 },
-    { label: 'Gold Metallic', hex: 0xe3b341 },
-    { label: 'Arctic White', hex: 0xf0f6fc }
+  wheel: [
+    { label: 'Fuchs Silver / Polish', hex: 0xc9d1d9 },
+    { label: 'Satin Black', hex: 0x161b22 },
+    { label: 'Hyperion Gold', hex: 0xd29922 },
+    { label: 'Bronze Titanium', hex: 0x7d6f56 },
+    { label: 'Pure White', hex: 0xf0f6fc }
   ]
 };
-
-const WHEEL_STYLES: { id: WheelStyleId; label: string; desc: string }[] = [
-  { id: 'sport_mesh', label: 'Sport Mesh', desc: 'Lightweight multi-spoke alloy' },
-  { id: 'turbofan', label: 'Aero Turbofan', desc: 'High-downforce brake cooling disc' },
-  { id: 'offroad_beadlock', label: 'Offroad Beadlock', desc: 'Deep-dish beadlock outer rim' },
-  { id: 'formula_monoblock', label: 'Monoblock Center-Lock', desc: 'Pure racing center-nut forged wheel' }
-];
 
 export class CustomizationPanel {
   private container: HTMLElement;
   private currentCustomization!: VehicleCustomization;
+  private currentCapabilities: VehicleCustomizationCapabilities = { primaryColor: true, wheelColor: true };
+  private carName: string = 'Vehicle';
   private onChangeCallback: (cust: VehicleCustomization) => void;
   private onResetCallback: () => void;
 
@@ -56,14 +52,46 @@ export class CustomizationPanel {
     this.onResetCallback = onReset;
   }
 
-  public render(customization: VehicleCustomization): void {
+  public render(
+    customization: VehicleCustomization,
+    capabilities?: VehicleCustomizationCapabilities | boolean,
+    carName: string = 'Vehicle'
+  ): void {
     this.currentCustomization = { ...customization };
+    this.carName = carName;
 
+    // Normalize capabilities
+    if (typeof capabilities === 'boolean') {
+      this.currentCapabilities = capabilities
+        ? { primaryColor: true, secondaryColor: true, accentColor: true, wheelColor: true }
+        : { primaryColor: true, wheelColor: true };
+    } else if (capabilities) {
+      this.currentCapabilities = capabilities;
+    } else {
+      this.currentCapabilities = { primaryColor: true, wheelColor: true };
+    }
+
+    const caps = this.currentCapabilities;
     const toHexStr = (n: number) => '#' + n.toString(16).padStart(6, '0');
 
-    this.container.innerHTML = `
+    // Count active channels for user transparency
+    const activeChannels = [
+      caps.primaryColor !== false ? 'Body Paint' : null,
+      caps.secondaryColor ? 'Roof / Canopy' : null,
+      caps.accentColor ? 'Calipers & Aero' : null,
+      caps.wheelColor !== false ? 'Wheels / Rims' : null
+    ].filter(Boolean);
+
+    let html = `
       <div class="custom-card">
-        <!-- 1. Primary Paint -->
+        <div class="custom-note" style="padding: 6px 10px; font-size: 11px; color: #58a6ff; border-left: 2px solid #58a6ff; margin-bottom: 12px; background: rgba(88,166,255,0.06);">
+          Showing ${activeChannels.length} factory customization channel${activeChannels.length > 1 ? 's' : ''} for <strong>${this.carName}</strong>: ${activeChannels.join(', ')}.
+        </div>
+    `;
+
+    // 1. Primary Paint (Body)
+    if (caps.primaryColor !== false) {
+      html += `
         <div class="custom-group">
           <div class="custom-group-header">
             <span class="custom-label">PRIMARY BODY PAINT</span>
@@ -80,8 +108,12 @@ export class CustomizationPanel {
             `).join('')}
           </div>
         </div>
+      `;
+    }
 
-        <!-- 2. Secondary Paint -->
+    // 2. Secondary Paint (Cabin / Canopy / Carbon Aero / Splitter)
+    if (caps.secondaryColor) {
+      html += `
         <div class="custom-group">
           <div class="custom-group-header">
             <span class="custom-label">CABIN / CANOPY / ROOF</span>
@@ -98,8 +130,12 @@ export class CustomizationPanel {
             `).join('')}
           </div>
         </div>
+      `;
+    }
 
-        <!-- 3. Accent Paint -->
+    // 3. Accent Paint (Brake Calipers & Aero Blades)
+    if (caps.accentColor) {
+      html += `
         <div class="custom-group">
           <div class="custom-group-header">
             <span class="custom-label">AERODYNAMIC & CALIPER ACCENT</span>
@@ -116,40 +152,34 @@ export class CustomizationPanel {
             `).join('')}
           </div>
         </div>
+      `;
+    }
 
-        <!-- 4. Wheel Rim Style -->
-        <div class="custom-group">
-          <span class="custom-label">WHEEL RIM ARCHITECTURE</span>
-          <div class="wheel-style-grid">
-            ${WHEEL_STYLES.map(w => `
-              <button class="wheel-style-btn ${customization.wheelStyle === w.id ? 'active' : ''}" data-style="${w.id}">
-                <div class="wheel-style-name">${w.label}</div>
-                <div class="wheel-style-desc">${w.desc}</div>
-              </button>
-            `).join('')}
-          </div>
-        </div>
-
-        <!-- 5. Wheel Rim Paint -->
+    // 4. Wheel & Rim Finish
+    if (caps.wheelColor !== false) {
+      html += `
         <div class="custom-group">
           <div class="custom-group-header">
-            <span class="custom-label">WHEEL FINISH</span>
-            <input type="color" id="picker-rim" class="color-picker-input" value="${toHexStr(customization.wheelColor)}" title="Custom color" />
+            <span class="custom-label">WHEELS & RIMS FINISH</span>
+            <input type="color" id="picker-wheel" class="color-picker-input" value="${toHexStr(customization.wheelColor)}" title="Custom color" />
           </div>
           <div class="swatch-grid">
-            ${COLOR_SWATCHES.rim.map(s => `
+            ${COLOR_SWATCHES.wheel.map(s => `
               <button class="swatch-btn ${customization.wheelColor === s.hex ? 'active' : ''}" 
                       style="background-color: ${toHexStr(s.hex)};" 
-                      data-target="rim" 
+                      data-target="wheel" 
                       data-hex="${s.hex}" 
                       title="${s.label}">
               </button>
             `).join('')}
           </div>
         </div>
+      `;
+    }
 
+    html += `
         <!-- Reset Button -->
-        <div class="custom-actions">
+        <div class="custom-actions" style="margin-top: 14px;">
           <button id="btn-reset-customization" class="btn-secondary-reset">
             ↺ Restore Factory Defaults
           </button>
@@ -157,6 +187,7 @@ export class CustomizationPanel {
       </div>
     `;
 
+    this.container.innerHTML = html;
     this.bindEvents();
   }
 
@@ -171,10 +202,10 @@ export class CustomizationPanel {
         if (target === 'primary') this.currentCustomization.primaryColor = hex;
         else if (target === 'secondary') this.currentCustomization.secondaryColor = hex;
         else if (target === 'accent') this.currentCustomization.accentColor = hex;
-        else if (target === 'rim') this.currentCustomization.wheelColor = hex;
+        else if (target === 'wheel') this.currentCustomization.wheelColor = hex;
 
         this.onChangeCallback(this.currentCustomization);
-        this.render(this.currentCustomization);
+        this.render(this.currentCustomization, this.currentCapabilities, this.carName);
       });
     });
 
@@ -188,28 +219,14 @@ export class CustomizationPanel {
         this.onChangeCallback(this.currentCustomization);
       });
       picker.addEventListener('change', () => {
-        this.render(this.currentCustomization);
+        this.render(this.currentCustomization, this.currentCapabilities, this.carName);
       });
     };
 
     bindPicker('#picker-primary', 'primaryColor');
     bindPicker('#picker-secondary', 'secondaryColor');
     bindPicker('#picker-accent', 'accentColor');
-    bindPicker('#picker-rim', 'wheelColor');
-
-    // Wheel style buttons
-    const wheelBtns = this.container.querySelectorAll<HTMLButtonElement>('.wheel-style-btn');
-    wheelBtns.forEach(btn => {
-      btn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        const style = btn.dataset.style as WheelStyleId;
-        if (style) {
-          this.currentCustomization.wheelStyle = style;
-          this.onChangeCallback(this.currentCustomization);
-          this.render(this.currentCustomization);
-        }
-      });
-    });
+    bindPicker('#picker-wheel', 'wheelColor');
 
     // Reset button
     const resetBtn = this.container.querySelector<HTMLButtonElement>('#btn-reset-customization');

@@ -40,15 +40,15 @@ export class Vehicle {
       this.definition = definitionOrConfig as VehicleDefinition;
       this.config = this.definition.config;
     } else {
-      // Default to Apex S1 or construct fallback definition from config
-      const fallbackDef = VehicleRegistry.get('sports_apex_s1');
+      // Default to Porsche 930 or construct fallback definition from config
+      const fallbackDef = VehicleRegistry.get('sports_porsche_930') || VehicleRegistry.get('sports_apex_s1');
       if (fallbackDef) {
         this.definition = fallbackDef;
         this.config = definitionOrConfig ? (definitionOrConfig as VehicleConfig) : fallbackDef.config;
       } else {
         // Registry might not be initialized yet
         VehicleRegistry.initialize();
-        this.definition = VehicleRegistry.getOrThrow('sports_apex_s1');
+        this.definition = VehicleRegistry.getOrThrow('sports_porsche_930');
         this.config = this.definition.config;
       }
     }
@@ -98,6 +98,10 @@ export class Vehicle {
       this.visualElements.materials.secondary.color.setHex(customization.secondaryColor);
       this.visualElements.materials.accent.color.setHex(customization.accentColor);
       this.visualElements.materials.rim.color.setHex(customization.wheelColor);
+    }
+
+    if (this.externalModel) {
+      this.applyCustomizationToExternalModel(this.customization);
     }
 
     if (wheelStyleChanged) {
@@ -168,13 +172,15 @@ export class Vehicle {
     const assetId = this.definition?.visuals?.modelAssetId;
     const modelUrl = this.definition?.visuals?.modelUrl;
     if (!assetId && !modelUrl) return;
+    if (assetId?.startsWith('procedural')) return;
 
     try {
       const assetMgr = AssetManager.getInstance();
       let model: THREE.Object3D | null = null;
       if (assetId) {
         model = await assetMgr.loadGameAsset(assetId);
-      } else if (modelUrl) {
+      }
+      if (!model && modelUrl) {
         model = await assetMgr.loadModel(modelUrl);
       }
 
@@ -187,35 +193,79 @@ export class Vehicle {
 
       const cloned = model.clone(true);
 
-      // Compute bounding box
-      const box = new THREE.Box3().setFromObject(cloned);
+      // Clean unwanted helper meshes from external models (shadow planes, alternative rim variants, fake light glows)
+      cloned.traverse((child) => {
+        const name = (child.name || '').toLowerCase();
+        const mat = (child as THREE.Mesh).material;
+        const matName = mat
+          ? (Array.isArray(mat) ? mat.map((m) => m.name || '') : [mat.name || '']).join(' ').toLowerCase()
+          : '';
+        if (
+          name.includes('shadow') ||
+          name.includes('glow') ||
+          name.includes('rim_t0b') ||
+          name.includes('_t0b_') ||
+          name.endsWith('_t0b') ||
+          matName.includes('material.010')
+        ) {
+          child.visible = false;
+        }
+      });
+
+      // Wrapper group for clean centering and rotation around origin
+      const modelWrapper = new THREE.Group();
+      const innerGroup = new THREE.Group();
+      innerGroup.add(cloned);
+
+      if (this.definition.visuals.modelRotationX) {
+        innerGroup.rotation.x = this.definition.visuals.modelRotationX;
+      }
+      if (this.definition.visuals.modelRotationY) {
+        innerGroup.rotation.y = this.definition.visuals.modelRotationY;
+      }
+      if (this.definition.visuals.modelRotationZ) {
+        innerGroup.rotation.z = this.definition.visuals.modelRotationZ;
+      }
+      innerGroup.updateMatrixWorld(true);
+
+      // Compute bounding box AFTER rotation is applied so dimensions match vehicle axis conventions
+      const box = new THREE.Box3();
+      innerGroup.traverse((child) => {
+        if ((child as THREE.Mesh).isMesh && child.visible) {
+          box.expandByObject(child);
+        }
+      });
       const size = box.getSize(new THREE.Vector3());
       const center = box.getCenter(new THREE.Vector3());
 
       const dim = this.config.dimensions;
-      // Target length along Z, target width along X, target height along Y
-      const scaleX = (dim.trackWidth * 1.05) / Math.max(0.1, size.x);
-      const scaleY = (dim.height * 0.95) / Math.max(0.1, size.y);
-      const scaleZ = (dim.length * 0.92) / Math.max(0.1, size.z);
+      // Authentic 1:1 real-world scaling:
+      // High-detail automotive 3D assets maintain accurate blueprint proportions.
+      // Target bumper-to-bumper length along Z is the definitive reference dimension (since raw mesh width includes
+      // side mirrors and height includes suspension travel and antennas).
+      const scaleZ = dim.length / Math.max(0.0001, size.z);
       const scaleMultiplier = this.definition.visuals.modelScaleMultiplier ?? 1.0;
-      const uniformScale = Math.min(scaleX, scaleY, scaleZ) * scaleMultiplier;
+      const uniformScale = scaleZ * scaleMultiplier;
 
-      // Wrapper group for clean centering and rotation around origin
-      const modelWrapper = new THREE.Group();
-      cloned.position.set(-center.x, -box.min.y, -center.z);
-      modelWrapper.add(cloned);
+      // Center inner group relative to modelWrapper so base rests at y=0 and center is at (0, 0)
+      innerGroup.position.set(-center.x, -box.min.y, -center.z);
+      modelWrapper.add(innerGroup);
 
       modelWrapper.scale.set(uniformScale, uniformScale, uniformScale);
-      if (this.definition.visuals.modelRotationY) {
-        modelWrapper.rotation.y = this.definition.visuals.modelRotationY;
-      }
       if (this.definition.visuals.modelOffsetY) {
         modelWrapper.position.y += this.definition.visuals.modelOffsetY;
       }
 
       modelWrapper.traverse((child) => {
         if ((child as THREE.Mesh).isMesh) {
-          child.castShadow = true;
+          const name = (child.name || '').toLowerCase();
+          const isInteriorHidden =
+            name.includes('carpet') ||
+            name.includes('steering') ||
+            name.includes('nut') ||
+            name.includes('pedal') ||
+            name.includes('interior');
+          child.castShadow = !isInteriorHidden;
           child.receiveShadow = true;
         }
       });
@@ -233,6 +283,9 @@ export class Vehicle {
       this.externalModel = modelWrapper;
       this.chassisGroup.add(modelWrapper);
 
+      // Immediately apply active customization to the newly attached external 3D model
+      this.applyCustomizationToExternalModel(this.customization);
+
       // External 3D model already has wheels modeled; hide procedural wheel meshes to avoid duplicates
       for (const pivot of this.wheelSteerPivots) {
         pivot.visible = false;
@@ -247,6 +300,182 @@ export class Vehicle {
         pivot.visible = true;
       }
     }
+  }
+
+  private applyCustomizationToExternalModel(customization: VehicleCustomization): void {
+    if (!this.externalModel) return;
+
+    this.externalModel.traverse((child) => {
+      if (!(child as THREE.Mesh).isMesh) return;
+      const mesh = child as THREE.Mesh;
+      const mat = mesh.material;
+      if (!mat) return;
+
+      // 1. Polyfork vertex-colored meshes (e.g. mesh_0 with geometry.attributes.color)
+      if (mesh.geometry && mesh.geometry.attributes.color) {
+        const colAttr = mesh.geometry.attributes.color as THREE.BufferAttribute;
+        if (!mesh.userData.originalColors) {
+          mesh.userData.originalColors = new Float32Array(colAttr.array);
+        }
+        const orig = mesh.userData.originalColors as Float32Array;
+
+        const targetColor = new THREE.Color(customization.primaryColor);
+        const tR = targetColor.r;
+        const tG = targetColor.g;
+        const tB = targetColor.b;
+
+        // Identify primary body vertex color (most frequent non-black/non-glass vertex color)
+        if (!mesh.userData.bodyHexColor) {
+          const counts = new Map<string, number>();
+          for (let i = 0; i < colAttr.count; i++) {
+            const r = Math.round(orig[i * 3] * 255);
+            const g = Math.round(orig[i * 3 + 1] * 255);
+            const b = Math.round(orig[i * 3 + 2] * 255);
+            if (r < 40 && g < 40 && b < 40) continue;
+            const hex = `#${((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1)}`;
+            counts.set(hex, (counts.get(hex) || 0) + 1);
+          }
+          let maxCount = 0;
+          let bodyHex = '';
+          for (const [hex, count] of counts.entries()) {
+            if (count > maxCount) {
+              maxCount = count;
+              bodyHex = hex;
+            }
+          }
+          mesh.userData.bodyHexColor = bodyHex;
+        }
+
+        const bodyHex = mesh.userData.bodyHexColor;
+        if (bodyHex) {
+          for (let i = 0; i < colAttr.count; i++) {
+            const r = Math.round(orig[i * 3] * 255);
+            const g = Math.round(orig[i * 3 + 1] * 255);
+            const b = Math.round(orig[i * 3 + 2] * 255);
+            const hex = `#${((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1)}`;
+            if (hex === bodyHex) {
+              colAttr.setXYZ(i, tR, tG, tB);
+            }
+          }
+          colAttr.needsUpdate = true;
+        }
+        return;
+      }
+
+      // 2. Standard multi-material 3D models (Ferrari 296 GTB & Porsche 911 Turbo)
+      const materials = Array.isArray(mat) ? mat : [mat];
+      materials.forEach((m) => {
+        if (!m || !('color' in m)) return;
+        const matName = (m.name || '').toLowerCase();
+        const meshName = (mesh.name || '').toLowerCase();
+
+        // Guard: Do NOT tint windows, glass, headlights, tail lights, tires, interior seats, badges, or carpets
+        if (
+          matName.includes('window') ||
+          matName.includes('glass') ||
+          matName.includes('tire') ||
+          matName.includes('tyre') ||
+          matName.includes('cartire') ||
+          matName.includes('light') ||
+          matName.includes('led') ||
+          matName.includes('reflector') ||
+          matName.includes('windscreen') ||
+          matName.includes('shadow') ||
+          matName.includes('atlas') ||
+          matName.includes('chrome') ||
+          matName.includes('exhaust') ||
+          matName.includes('metal_brushed') ||
+          (matName.includes('leather') && !matName.includes('red')) ||
+          matName.includes('carpet') ||
+          matName.includes('interior') ||
+          matName.includes('wipers')
+        ) {
+          return;
+        }
+
+        // 1. Primary Body Paint
+        if (
+          matName === 'body' ||
+          matName === 'mt_body' ||
+          matName === 'd5_d9_73' ||
+          matName === 'material.001' ||
+          matName === 'standardsurface1' ||
+          matName === 'phong1' ||
+          matName.includes('body_color') ||
+          matName.includes('paintred') ||
+          matName.includes('curacao') ||
+          matName.includes('bonnetok') ||
+          matName.includes('bumpfrontok') ||
+          matName.includes('formula_1_car') ||
+          (matName.includes('mcl35m') && !matName.includes('rim') && !matName.includes('wheel') && !matName.includes('tyre')) ||
+          (matName.includes('paint') && !matName.includes('yellow') && !matName.includes('tire') && !matName.includes('tyre')) ||
+          meshName.startsWith('body')
+        ) {
+          if (!mesh.userData.clonedPrimaryMat) {
+            mesh.material = (m as THREE.MeshStandardMaterial).clone();
+            mesh.userData.clonedPrimaryMat = true;
+          }
+          ((mesh.material as any).color as THREE.Color).setHex(customization.primaryColor);
+        }
+        // 2. Secondary / Canopy / Roof / Carbon Trim / Splitters / Diffuser
+        else if (
+          matName.includes('plastic') ||
+          matName.includes('trim') ||
+          matName.includes('carbon') ||
+          matName.includes('abs') ||
+          matName.includes('mirrorcover') ||
+          matName.includes('misc') ||
+          meshName.startsWith('trim') ||
+          meshName.includes('roof') ||
+          meshName.includes('buttress') ||
+          meshName.includes('spoiler')
+        ) {
+          if (!mesh.userData.clonedTrimMat) {
+            mesh.material = (m as THREE.MeshStandardMaterial).clone();
+            mesh.userData.clonedTrimMat = true;
+          }
+          ((mesh.material as any).color as THREE.Color).setHex(customization.secondaryColor);
+        }
+        // 3. Caliper & Aerodynamic Accents
+        else if (
+          matName.includes('leather_red') ||
+          matName.includes('accent') ||
+          matName.includes('brake') ||
+          matName.includes('caliper') ||
+          matName.includes('brakecaliper') ||
+          matName.includes('yellow_trim') ||
+          meshName.includes('brake') ||
+          meshName.includes('caliper')
+        ) {
+          if (!mesh.userData.clonedAccentMat) {
+            mesh.material = (m as THREE.MeshStandardMaterial).clone();
+            mesh.userData.clonedAccentMat = true;
+          }
+          ((mesh.material as any).color as THREE.Color).setHex(customization.accentColor);
+        }
+        // 4. Wheels / Rims
+        else if (
+          matName.includes('rim') ||
+          matName.includes('wheel') ||
+          matName.includes('alloywheels') ||
+          matName.includes('metal_gray') ||
+          matName.includes('paintyellow') ||
+          matName === 'material.002' ||
+          matName === '47_cf_b10' ||
+          matName === 'a_53_16_ef1' ||
+          matName === 'rim_png' ||
+          meshName.startsWith('rim') ||
+          meshName.startsWith('wheel') ||
+          meshName.includes('rim')
+        ) {
+          if (!mesh.userData.clonedWheelMat) {
+            mesh.material = (m as THREE.MeshStandardMaterial).clone();
+            mesh.userData.clonedWheelMat = true;
+          }
+          ((mesh.material as any).color as THREE.Color).setHex(customization.wheelColor);
+        }
+      });
+    });
   }
 
   private buildWheels(): void {

@@ -3,6 +3,8 @@ import { TireAudio } from './TireAudio';
 import { SurfaceAudio } from './SurfaceAudio';
 import { CollisionAudio } from './CollisionAudio';
 import { EnvironmentAudio } from './EnvironmentAudio';
+import { WorkshopMusic } from './WorkshopMusic';
+import { RaceAudio } from './RaceAudio';
 import { VehicleTelemetry } from '../physics/VehiclePhysics';
 
 export class AudioManager {
@@ -16,9 +18,12 @@ export class AudioManager {
   public surfaceAudio!: SurfaceAudio;
   public collisionAudio!: CollisionAudio;
   public environmentAudio!: EnvironmentAudio;
+  public workshopMusic!: WorkshopMusic;
+  public raceAudio!: RaceAudio;
 
   private isInitialized: boolean = false;
   private isMuted: boolean = false;
+  private isGarageActive: boolean = false;
   private masterVolume: number = 0.85;
 
   constructor() {
@@ -54,6 +59,8 @@ export class AudioManager {
       this.surfaceAudio = new SurfaceAudio(this.ctx, this.compressor);
       this.collisionAudio = new CollisionAudio(this.ctx, this.compressor);
       this.environmentAudio = new EnvironmentAudio(this.ctx, this.compressor);
+      this.workshopMusic = new WorkshopMusic(this.ctx, this.compressor);
+      this.raceAudio = new RaceAudio(this.ctx, this.compressor);
 
       this.isInitialized = true;
     } catch (err) {
@@ -75,6 +82,10 @@ export class AudioManager {
         this.tireAudio.start();
         this.surfaceAudio.start();
         this.environmentAudio.start();
+
+        if (this.isGarageActive) {
+          this.workshopMusic.play();
+        }
       }
 
       window.removeEventListener('pointerdown', unlock);
@@ -83,6 +94,20 @@ export class AudioManager {
 
     window.addEventListener('pointerdown', unlock, { once: true });
     window.addEventListener('keydown', unlock, { once: true });
+  }
+
+  public playWorkshopMusic(): void {
+    this.isGarageActive = true;
+    if (this.isInitialized && this.workshopMusic) {
+      this.workshopMusic.play();
+    }
+  }
+
+  public stopWorkshopMusic(): void {
+    this.isGarageActive = false;
+    if (this.isInitialized && this.workshopMusic) {
+      this.workshopMusic.stop();
+    }
   }
 
   public setCategory(category: string): void {
@@ -94,6 +119,24 @@ export class AudioManager {
   public triggerImpact(severity: number): void {
     if (this.isInitialized && this.collisionAudio) {
       this.collisionAudio.triggerImpact(severity);
+    }
+  }
+
+  public triggerCountdownBeep(isGo: boolean = false): void {
+    if (this.isInitialized && this.raceAudio) {
+      this.raceAudio.triggerCountdownBeep(isGo);
+    }
+  }
+
+  public triggerLapChime(): void {
+    if (this.isInitialized && this.raceAudio) {
+      this.raceAudio.triggerLapChime();
+    }
+  }
+
+  public triggerRaceFinish(): void {
+    if (this.isInitialized && this.raceAudio) {
+      this.raceAudio.triggerRaceFinish();
     }
   }
 
@@ -123,8 +166,21 @@ export class AudioManager {
   /**
    * Main per-frame audio update loop.
    */
-  public update(telemetry: VehicleTelemetry, isShifting: boolean = false): void {
+  public update(
+    telemetry: VehicleTelemetry,
+    isShifting: boolean = false,
+    _dt: number = 0.016,
+    isRaceActive: boolean = true
+  ): void {
     if (!this.isInitialized || !this.ctx || this.ctx.state !== 'running') return;
+
+    if (!isRaceActive) {
+      this.engineAudio.stop();
+      this.tireAudio.stop();
+      this.surfaceAudio.stop();
+      this.environmentAudio.stop();
+      return;
+    }
 
     // 1. Engine
     this.engineAudio.update(
@@ -132,7 +188,8 @@ export class AudioManager {
       telemetry.throttle,
       telemetry.speedKmH,
       telemetry.gear,
-      isShifting
+      isShifting,
+      isRaceActive
     );
 
     // 2. Tire scrub & skid
@@ -144,18 +201,20 @@ export class AudioManager {
       telemetry.surface
     );
 
-    // 3. Surface & Kerbs
+    // 4. Surface & Kerbs
     this.surfaceAudio.update(
       telemetry.speedKmH,
       telemetry.surface,
       telemetry.curbVibration
     );
 
-    // 4. Aerodynamic Wind Rush
+    // 5. Aerodynamic Wind Rush
     this.environmentAudio.update(telemetry.speedKmH);
   }
 
   public dispose(): void {
+    if (this.workshopMusic) this.workshopMusic.dispose();
+    if (this.raceAudio) this.raceAudio.dispose();
     if (this.ctx) {
       this.ctx.close();
       this.ctx = null;

@@ -160,13 +160,21 @@ export class EngineAudio {
   public update(
     rpm: number,
     throttle: number,
-    _speedKmH: number,
+    speedKmH: number,
     _gear: string,
-    isShifting: boolean
+    isShifting: boolean,
+    isRaceActive: boolean = true
   ): void {
     if (!this.isStarted) return;
 
     const t = this.ctx.currentTime;
+
+    // 0. Completely silence engine audio when race is stopped, finished, or in menus
+    if (!isRaceActive) {
+      this.masterEngineGain.gain.setTargetAtTime(0.0, t, 0.08);
+      return;
+    }
+
     const profile = this.currentProfile;
 
     // 1. Calculate Cylinder Firing Frequency (Hz)
@@ -181,26 +189,30 @@ export class EngineAudio {
     this.oscSubBass.frequency.setTargetAtTime(baseFreq * 0.5, t, 0.04);
 
     // 2. Dynamic Filter Opening with Throttle & RPM
-    // Idle / coast: low cutoff (~450 Hz) gives deep, muffled intake sound
-    // Full throttle: cutoff opens up to ~3800 Hz giving screaming combustion roar
-    const baseCutoff = 350 + (rpm / 8000.0) * 800;
-    const throttleCutoff = throttle * 2800;
+    // When stationary at idle (throttle < 0.02, speed < 2 km/h), filter closes to 240 Hz for a soft, quiet purr
+    const isStationary = throttle < 0.02 && speedKmH < 2.0;
+    const baseCutoff = isStationary ? 240 : 350 + (rpm / 8000.0) * 800;
+    const throttleCutoff = throttle * 3200;
     const targetCutoff = Math.min(12000, baseCutoff + throttleCutoff);
     this.lowpassFilter.frequency.setTargetAtTime(targetCutoff, t, 0.05);
 
-    // 3. Harmonic Balances
+    // 3. Harmonic Balances - Zero out sub-bass drone and harmonic buzzing when off-throttle
     const harm = profile.harmonicGains;
-    const throttleBoost = 1.0 + throttle * 0.8;
+    const throttleBoost = 0.4 + throttle * 1.4;
     this.gainFundamental.gain.setTargetAtTime(harm[0] * throttleBoost, t, 0.05);
     this.gainHarmonic2.gain.setTargetAtTime(harm[1] * throttleBoost, t, 0.05);
-    this.gainHarmonic3.gain.setTargetAtTime(harm[2] * (0.3 + throttle * 1.2), t, 0.05);
-    this.gainSubBass.gain.setTargetAtTime(harm[3] * (1.2 - throttle * 0.4), t, 0.05);
+    this.gainHarmonic3.gain.setTargetAtTime(harm[2] * (throttle * 1.5), t, 0.05); // No buzz at idle
+    this.gainSubBass.gain.setTargetAtTime(harm[3] * (throttle * 1.2), t, 0.05);   // No sub-bass hum at idle
 
     // 4. Overall Engine Volume (Throttle + RPM scaling)
-    // Dip volume momentarily during clutch open / gear shifts
-    let targetVol = 0.28 + (rpm / 8000.0) * 0.35 + throttle * 0.22;
-    if (isShifting) {
-      targetVol *= 0.45;
+    let targetVol = 0;
+    if (isStationary) {
+      targetVol = 0.05; // Soft gentle idle - zero loud electrical hum
+    } else {
+      targetVol = 0.16 + (rpm / 8000.0) * 0.38 + throttle * 0.35;
+      if (isShifting) {
+        targetVol *= 0.45;
+      }
     }
     this.masterEngineGain.gain.setTargetAtTime(Math.min(1.0, targetVol), t, 0.04);
   }

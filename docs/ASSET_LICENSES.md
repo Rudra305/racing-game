@@ -290,73 +290,11 @@ Per project architecture directive, Polyfork (`https://polyfork.dev`) serves as 
 
 ---
 
-## 4. Polyfork 3D Vehicle Models (Player Vehicle Suite)
+## 4. High-Fidelity 3D Vehicle Models (Phase 8+)
 
-Per project architecture directive, Polyfork serves as the primary asset source for player 3D vehicles. AI opponent vehicles retain lightweight procedural models to preserve 100% compute power for physics and pathfinding.
+All low-poly vehicle models have been decommissioned. The vehicle roster features authentic high-fidelity Class-A 3D models with real-time multi-material custom paint shaders.
 
-- **Asset Name**: 1960s Apex Muscle GT
-  - **Asset ID**: `muscle-car-60s` / `muscle-car-60s-524d46`
-  - **Source**: Polyfork
-  - **Creator**: Lucas Martinic / Polyfork (Retro Cars Kit)
-  - **License**: Polyfork Standard Asset License
-  - **Commercial Use**: Allowed
-  - **Modification**: Allowed
-  - **Attribution**: Not required
-  - **Asset URL**: [https://polyfork.dev/asset/muscle-car-60s-524d46](https://polyfork.dev/asset/muscle-car-60s-524d46)
-  - **Game Usage**: Primary 3D vehicle model for Sports Class Apex S1 (4,271 triangles).
 
-- **Asset Name**: 1980s Terra Rally Hatch
-  - **Asset ID**: `hatchback-80s` / `hatchback-80s-e95554`
-  - **Source**: Polyfork
-  - **Creator**: Lucas Martinic / Polyfork (Retro Cars Kit)
-  - **License**: Polyfork Standard Asset License
-  - **Commercial Use**: Allowed
-  - **Modification**: Allowed
-  - **Attribution**: Not required
-  - **Asset URL**: [https://polyfork.dev/asset/hatchback-80s-e95554](https://polyfork.dev/asset/hatchback-80s-e95554)
-  - **Game Usage**: Primary 3D vehicle model for Rally Class Terra R1 (3,633 triangles).
-
-- **Asset Name**: Titan Suburban 4x4
-  - **Asset ID**: `suburban-pickup` / `suburban-pickup-truck-d15ea2`
-  - **Source**: Polyfork
-  - **Creator**: Lucas Martinic / Polyfork (Neighborhood Pathways Kit)
-  - **License**: Polyfork Standard Asset License
-  - **Commercial Use**: Allowed
-  - **Modification**: Allowed
-  - **Attribution**: Not required
-  - **Asset URL**: [https://polyfork.dev/asset/suburban-pickup-truck-d15ea2](https://polyfork.dev/asset/suburban-pickup-truck-d15ea2)
-  - **Game Usage**: Primary 3D vehicle model for SUV Class Titan Overland (2,339 triangles).
-
-- **Asset Name**: Crossfire Scout Jeep
-  - **Asset ID**: `scout-jeep` / `scout-jeep-c02efe`
-  - **Source**: Polyfork
-  - **Creator**: Lucas Martinic / Polyfork (World War II Kit)
-  - **License**: Polyfork Standard Asset License
-  - **Commercial Use**: Allowed
-  - **Modification**: Allowed
-  - **Attribution**: Not required
-  - **Asset URL**: [https://polyfork.dev/asset/scout-jeep-c02efe](https://polyfork.dev/asset/scout-jeep-c02efe)
-  - **Game Usage**: Primary 3D vehicle model for Rally Class Crossfire RX (1,772 triangles).
-
-- **Asset Name**: Vortex Interceptor Cruiser
-  - **Asset ID**: `police-cruiser` / `police-cruiser-a2d25e`
-  - **Source**: Polyfork
-  - **Creator**: Lucas Martinic / Polyfork (NYC City Kit)
-  - **License**: Polyfork Standard Asset License
-  - **Commercial Use**: Allowed
-  - **Modification**: Allowed
-  - **Attribution**: Not required
-  - **Asset URL**: [https://polyfork.dev/asset/police-cruiser-a2d25e](https://polyfork.dev/asset/police-cruiser-a2d25e)
-  - **Game Usage**: Primary 3D vehicle model for Sports Class Vortex GT (2,130 triangles).
-
-- **Asset Name**: Venom GT Convertible
-  - **Asset ID**: `convertible-60s` / `convertible-60s-b76f89`
-  - **Source**: Polyfork
-  - **Creator**: Lucas Martinic / Polyfork (Retro Cars Kit)
-  - **License**: Polyfork Standard Asset License
-  - **Commercial Use**: Allowed
-  - **Modification**: Allowed
-  - **Attribution**: Not required
 - **Asset Name**: Ferrari 458 Hyper GT
   - **Asset ID**: `ferrari-gt`
   - **Source**: Three.js Examples (`examples/models/gltf/ferrari.glb`)
@@ -366,50 +304,143 @@ Per project architecture directive, Polyfork serves as the primary asset source 
   - **Modification**: Allowed
   - **Attribution**: MIT License Notice
   - **Asset URL**: [https://github.com/mrdoob/three.js/tree/dev/examples/models/gltf](https://github.com/mrdoob/three.js/tree/dev/examples/models/gltf)
-  - **Game Usage**: Primary 3D vehicle model for Supercar Class Venom Hyperion & Astraea Stradale (~14,850 triangles).
+  - **Game Usage**: Primary 3D vehicle model for Supercar Class Ferrari 296 GTB Assetto Fiorano (~14,850 triangles).
 
-- **Asset Name**: Apex GT Cup Racer
-  - **Asset ID**: `race-car`
-  - **Source**: Kenney Car Kit (via pmndrs/market-assets)
-  - **Creator**: Kenney (Kenney.nl)
-  - **License**: Creative Commons Zero (CC0 1.0 Universal - Public Domain)
+- **Asset Name**: 1982 Porsche 911 Turbo 3.3 (930)
+  - **Asset ID**: `porsche-930-turbo`
+  - **Asset File**: `public/assets/models/vehicles/porsche-930-turbo.glb`
+  - **Source**: Sketchfab ([https://skfb.ly/pN8EX](https://skfb.ly/pN8EX))
+  - **Creator**: 007
+  - **License**: Creative Commons Attribution (CC BY 4.0 - [http://creativecommons.org/licenses/by/4.0/](http://creativecommons.org/licenses/by/4.0/))
+  - **Commercial Use**: Allowed (with attribution)
+  - **Modification**: Allowed
+  - **Attribution Statement**: "1982_porsche_930_911_turbo_3.3" (https://skfb.ly/pN8EX) by 007 is licensed under Creative Commons Attribution (http://creativecommons.org/licenses/by/4.0/).
+  - **Game Usage**: Authentic high-fidelity 3D vehicle model for Sports Class 1982 Porsche 911 Turbo 3.3 with real-time body paint and Fuchs alloy wheel customization (~3.8 MB).
+
+- **Asset Name**: Toyota Supra RZ (A80 / Mk4)
+  - **Asset ID**: `toyota-supra-rz`
+  - **Asset File**: `public/assets/models/vehicles/toyota-supra-rz.glb`
+  - **Source**: Sketchfab ([https://sketchfab.com/3d-models/toyota-supra-rz-custom-1332b5276b9742d48cdad5d26cca9b9b](https://sketchfab.com/3d-models/toyota-supra-rz-custom-1332b5276b9742d48cdad5d26cca9b9b))
+  - **Creator**: Asphalt 8 Textures customs models
+  - **License**: Creative Commons Attribution (CC BY 4.0 - [http://creativecommons.org/licenses/by/4.0/](http://creativecommons.org/licenses/by/4.0/))
+  - **Commercial Use**: Allowed (with attribution)
+  - **Modification**: Allowed
+  - **Attribution Statement**: "Toyota supra rz Custom" by Asphalt 8 Textures customs models is licensed under CC BY 4.0.
+  - **Game Usage**: Sports Class iconic Japanese sports car with twin-turbo 2JZ-GTE engine, carbon fiber aero components, and multi-piece wheels (~3.42 MB).
+
+- **Asset Name**: 2023 Toyota GR Supra RZ Pandem
+  - **Asset ID**: `toyota-gr-supra-pandem`
+  - **Asset File**: `public/assets/models/vehicles/toyota-gr-supra-pandem.glb`
+  - **Source**: Sketchfab ([https://sketchfab.com/3d-models/2023-toyota-gr-supra-rz-db42-pandem-kit-1fa7b2dc48f340878d9e5aaf1000971d](https://sketchfab.com/3d-models/2023-toyota-gr-supra-rz-db42-pandem-kit-1fa7b2dc48f340878d9e5aaf1000971d))
+  - **Creator**: SIU Car Garage (https://sketchfab.com/Game_mode)
+  - **License**: Creative Commons Attribution-NonCommercial (CC BY-NC 4.0 - [http://creativecommons.org/licenses/by-nc/4.0/](http://creativecommons.org/licenses/by-nc/4.0/))
+  - **Commercial Use**: Non-Commercial Educational / Evaluation
+  - **Modification**: Allowed
+  - **Attribution Statement**: "2023 Toyota GR SUPRA RZ DB42 PANDEM Kit" by SIU Car Garage is licensed under CC BY-NC 4.0.
+  - **Game Usage**: Sports Class widebody aerodynamic track weapon with Pandem aero kit (~2.39 MB).
+
+- **Asset Name**: 2020 McLaren 765LT
+  - **Asset ID**: `mclaren-765lt`
+  - **Asset File**: `public/assets/models/vehicles/mclaren-765lt.glb`
+  - **Source**: Sketchfab ([https://sketchfab.com/3d-models/2020-mclaren-765lt-2f973f267a5e4816b561abe8d8a60054](https://sketchfab.com/3d-models/2020-mclaren-765lt-2f973f267a5e4816b561abe8d8a60054))
+  - **Creator**: OUTPISTON (https://sketchfab.com/outpiston)
+  - **License**: Creative Commons Attribution-NonCommercial-ShareAlike (CC BY-NC-SA 4.0 - [http://creativecommons.org/licenses/by-nc-sa/4.0/](http://creativecommons.org/licenses/by-nc-sa/4.0/))
+  - **Commercial Use**: Non-Commercial Educational / Evaluation
+  - **Modification**: Allowed
+  - **Attribution Statement**: "2020 McLaren 765LT" by OUTPISTON is licensed under CC BY-NC-SA 4.0.
+  - **Game Usage**: Supercar Class lightweight carbon-monocoque longtail track hypercar (~2.78 MB).
+
+- **Asset Name**: Mitsubishi Lancer Evolution VI
+  - **Asset ID**: `mitsubishi-lancer-evo-6`
+  - **Asset File**: `public/assets/models/vehicles/mitsubishi-lancer-evo-6.glb`
+  - **Source**: Sketchfab ([https://sketchfab.com/3d-models/mitsubishi-lancer-evolution-6-wwwvecarzcom-c3d5dcd8ff724bc88c46760d92fc5188](https://sketchfab.com/3d-models/mitsubishi-lancer-evolution-6-wwwvecarzcom-c3d5dcd8ff724bc88c46760d92fc5188))
+  - **Creator**: vecarz (https://sketchfab.com/heynic)
+  - **License**: Creative Commons Attribution (CC BY 4.0 - [http://creativecommons.org/licenses/by/4.0/](http://creativecommons.org/licenses/by/4.0/))
+  - **Commercial Use**: Allowed (with attribution)
+  - **Modification**: Allowed
+  - **Attribution Statement**: "Mitsubishi Lancer Evolution 6 | www.vecarz.com" by vecarz is licensed under CC BY 4.0.
+  - **Game Usage**: Rally Class iconic WRC Group A homologation special with 4G63T turbo engine and all-wheel drive (~4.76 MB).
+
+- **Asset Name**: 1999 Mitsubishi Lancer Evolution VI GSR T.M.E.
+  - **Asset ID**: `mitsubishi-lancer-evo-tme`
+  - **Asset File**: `public/assets/models/vehicles/mitsubishi-lancer-evo-tme.glb`
+  - **Source**: Sketchfab ([https://sketchfab.com/3d-models/1999-mitsubishi-lancer-evolution-vi-gsr-tme-d565cdb23b864308acc9678baa05d5d3](https://sketchfab.com/3d-models/1999-mitsubishi-lancer-evolution-vi-gsr-tme-d565cdb23b864308acc9678baa05d5d3))
+  - **Creator**: SIU Car Garage (https://sketchfab.com/Game_mode)
+  - **License**: Creative Commons Attribution-NonCommercial (CC BY-NC 4.0 - [http://creativecommons.org/licenses/by-nc/4.0/](http://creativecommons.org/licenses/by-nc/4.0/))
+  - **Commercial Use**: Non-Commercial Educational / Evaluation
+  - **Modification**: Allowed
+  - **Attribution Statement**: "1999 Mitsubishi Lancer Evolution VI GSR T.M.E" by SIU Car Garage is licensed under CC BY-NC 4.0.
+  - **Game Usage**: Rally Class Tommi Mäkinen Edition special with titanium turbine and redesigned tarmac bumper (~2.72 MB).
+
+- **Asset Name**: 1998 Subaru Impreza 22B STi Version
+  - **Asset ID**: `subaru-impreza-22b`
+  - **Asset File**: `public/assets/models/vehicles/subaru-impreza-22b.glb`
+  - **Source**: Sketchfab ([https://sketchfab.com/3d-models/1998-subaru-impreza-22b-sti-version-66bd94bdd92a4b79a39cd0307870b4eb](https://sketchfab.com/3d-models/1998-subaru-impreza-22b-sti-version-66bd94bdd92a4b79a39cd0307870b4eb))
+  - **Creator**: OUTPISTON (https://sketchfab.com/outpiston)
+  - **License**: Creative Commons Attribution-NonCommercial-ShareAlike (CC BY-NC-SA 4.0 - [http://creativecommons.org/licenses/by-nc-sa/4.0/](http://creativecommons.org/licenses/by-nc-sa/4.0/))
+  - **Commercial Use**: Non-Commercial Educational / Evaluation
+  - **Modification**: Allowed
+  - **Attribution Statement**: "1998 Subaru IMPREZA 22B STi Version" by OUTPISTON is licensed under CC BY-NC-SA 4.0.
+  - **Game Usage**: Rally Class bespoke widebody boxer rally icon with EJ22 turbo engine and gold BBS wheels (~4.93 MB).
+
+- **Asset Name**: 2010 Ford F-150 SVT Raptor R
+  - **Asset ID**: `ford-f150-raptor-r`
+  - **Asset File**: `public/assets/models/vehicles/ford-f150-raptor-r.glb`
+  - **Source**: Sketchfab ([https://sketchfab.com/3d-models/2010-ford-f-150-svt-raptor-r-b7e63d376e59453490907cebbd44ab72](https://sketchfab.com/3d-models/2010-ford-f-150-svt-raptor-r-b7e63d376e59453490907cebbd44ab72))
+  - **Creator**: Galaxy Car Showroom (https://sketchfab.com/adrianaflak09)
+  - **License**: Creative Commons Attribution (CC BY 4.0 - [http://creativecommons.org/licenses/by/4.0/](http://creativecommons.org/licenses/by/4.0/))
+  - **Commercial Use**: Allowed (with attribution)
+  - **Modification**: Allowed
+  - **Attribution Statement**: "2010 Ford F-150 SVT Raptor R" by Galaxy Car Showroom is licensed under CC BY 4.0.
+  - **Game Usage**: SUV & Off-Road Class Baja 1000 desert trophy truck with 6.2L V8 and Fox Racing bypass shocks (~5.47 MB).
+
+- **Asset Name**: McLaren MCL35M (F1 2021)
+  - **Asset ID**: `mclaren-mcl35m-f1`
+  - **Asset File**: `public/assets/models/vehicles/mclaren-mcl35m-f1.glb`
+  - **Source**: Sketchfab ([https://sketchfab.com/3d-models/f1-2021-mclaren-mcl35m-967ecec37468412083c40c62b3d7234d](https://sketchfab.com/3d-models/f1-2021-mclaren-mcl35m-967ecec37468412083c40c62b3d7234d))
+  - **Creator**: Excalibur (https://sketchfab.com/excalibur)
+  - **License**: Creative Commons Attribution (CC BY 4.0 - [http://creativecommons.org/licenses/by/4.0/](http://creativecommons.org/licenses/by/4.0/))
+  - **Commercial Use**: Allowed (with attribution)
+  - **Modification**: Allowed
+  - **Attribution Statement**: "F1 2021 McLaren MCL35M" by Excalibur is licensed under CC BY 4.0.
+  - **Game Usage**: Formula Class Grand Prix winning open-wheel racer with 1,000 HP turbo-hybrid power unit and high-downforce aerodynamics (~7.11 MB).
+
+- **Asset Name**: Red Bull Racing F1 (RB16B)
+  - **Asset ID**: `red-bull-f1`
+  - **Asset File**: `public/assets/models/vehicles/red-bull-f1.glb`
+  - **Source**: Sketchfab ([https://sketchfab.com/3d-models/red-bull-racing-but-with-detached-tyres-949c8dca6fbe4b76a4739dda69ecf0c0](https://sketchfab.com/3d-models/red-bull-racing-but-with-detached-tyres-949c8dca6fbe4b76a4739dda69ecf0c0))
+  - **Creator**: Jan Esch (https://sketchfab.com/Njan)
+  - **License**: Creative Commons Attribution (CC BY 4.0 - [http://creativecommons.org/licenses/by/4.0/](http://creativecommons.org/licenses/by/4.0/))
+  - **Commercial Use**: Allowed (with attribution)
+  - **Modification**: Allowed
+  - **Attribution Statement**: "Red Bull Racing (but with detached tyres)" by Jan Esch is licensed under CC BY 4.0.
+  - **Game Usage**: Formula Class World Championship open-wheel racer with Adrian Newey high-rake aero and detached wheel assemblies (~3.62 MB).
+
+---
+
+## 4. Audio & Sound Assets (Music & Vehicle SFX)
+
+All audio assets are royalty-free and comply with the Universal Asset Policy for web distribution.
+
+- **Asset Name**: Workshop Ambient Lounge Music
+  - **Asset File**: `public/assets/audio/music/workshop_ambient.mp3`
+  - **Source**: Pixabay ([https://pixabay.com/music/search/lounge/](https://pixabay.com/music/search/lounge/))
+  - **Title / Creator**: "Lounge" by The_Mountain
+  - **License**: Pixabay Content License (Free for commercial and non-commercial use across digital media, no attribution required)
   - **Commercial Use**: Allowed
   - **Modification**: Allowed
-  - **Attribution**: Not required (Public Domain)
-  - **Asset URL**: [https://kenney.nl/assets/car-kit](https://kenney.nl/assets/car-kit)
-  - **Game Usage**: Primary 3D vehicle model for Sports Class Vortex GT (~1,240 triangles).
+  - **Attribution**: Pixabay Content License
+  - **Game Usage**: Dynamic ambient background lounge music playing during garage customization, vehicle inspection, and showroom viewing with smooth crossfades.
 
-- **Asset Name**: Velocity Aero Formula
-  - **Asset ID**: `race-future`
-  - **Source**: Kenney Car Kit (via pmndrs/market-assets)
-  - **Creator**: Kenney (Kenney.nl)
-  - **License**: Creative Commons Zero (CC0 1.0 Universal - Public Domain)
+- **Asset Name**: Exhaust Overrun Backfire Pop
+  - **Asset File**: `public/assets/audio/effects/exhaust_backfire.mp3`
+  - **Source**: Pixabay ([https://pixabay.com/sound-effects/search/car%20backfire/](https://pixabay.com/sound-effects/search/car%20backfire/))
+  - **Title / Creator**: "BACKFIRE" by freesound_community
+  - **License**: Pixabay Content License (Free for commercial and non-commercial use)
   - **Commercial Use**: Allowed
   - **Modification**: Allowed
-  - **Attribution**: Not required (Public Domain)
-  - **Asset URL**: [https://kenney.nl/assets/car-kit](https://kenney.nl/assets/car-kit)
-  - **Game Usage**: Primary 3D vehicle model for Formula Class Velocity F1 (~1,380 triangles).
+  - **Attribution**: Pixabay Content License
+  - **Game Usage**: High-RPM overrun anti-lag combustion backfire pop triggered when rapidly lifting throttle above 5,800 RPM.
 
-- **Asset Name**: Apex Sport Sedan
-  - **Asset ID**: `sports-sedan`
-  - **Source**: Kenney Car Kit (via pmndrs/market-assets)
-  - **Creator**: Kenney (Kenney.nl)
-  - **License**: Creative Commons Zero (CC0 1.0 Universal - Public Domain)
-  - **Commercial Use**: Allowed
-  - **Modification**: Allowed
-  - **Attribution**: Not required (Public Domain)
-  - **Asset URL**: [https://kenney.nl/assets/car-kit](https://kenney.nl/assets/car-kit)
-  - **Game Usage**: Available 3D model for Sports Class (~1,190 triangles).
-
-- **Asset Name**: Kodiak Luxury Sport SUV
-  - **Asset ID**: `suv-luxury`
-  - **Source**: Kenney Car Kit (via pmndrs/market-assets)
-  - **Creator**: Kenney (Kenney.nl)
-  - **License**: Creative Commons Zero (CC0 1.0 Universal - Public Domain)
-  - **Commercial Use**: Allowed
-  - **Modification**: Allowed
-  - **Attribution**: Not required (Public Domain)
-  - **Asset URL**: [https://kenney.nl/assets/car-kit](https://kenney.nl/assets/car-kit)
-  - **Game Usage**: Primary 3D vehicle model for SUV Class Kodiak Sport RS (~1,410 triangles).
 
 

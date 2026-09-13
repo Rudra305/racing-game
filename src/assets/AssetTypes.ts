@@ -23,7 +23,7 @@ export type ProceduralMeshGenerator = () => THREE.BufferGeometry | THREE.Group |
 export interface GameAssetDefinition {
   id: string;
   name: string;
-  source: 'polyfork' | 'poly-pizza' | 'free3d' | 'threejs' | 'kenney' | 'procedural';
+  source: 'polyfork' | 'poly-pizza' | 'free3d' | 'threejs' | 'kenney' | 'procedural' | 'rendercodeninja' | 'open-source' | 'sketchfab';
   sourceUrl: string;
   category:
     | 'vehicle'

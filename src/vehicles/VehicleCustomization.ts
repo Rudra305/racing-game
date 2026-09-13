@@ -47,7 +47,7 @@ export function getDefaultCustomization(
 export function loadGarageSaveData(): GarageSaveData {
   const fallback: GarageSaveData = {
     version: CURRENT_SAVE_VERSION,
-    selectedVehicleId: 'sports_apex_s1',
+    selectedVehicleId: 'sports_porsche_930',
     selectedCategory: VehicleCategory.SPORTS,
     customizations: {}
   };

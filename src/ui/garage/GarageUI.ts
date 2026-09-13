@@ -234,6 +234,7 @@ export class GarageUI {
 
     list.innerHTML = vehicles.map(v => {
       const isSelected = v.id === selectedVehicleId;
+      const isPending = v.visuals.isModelPending;
       return `
         <button class="roster-card ${isSelected ? 'selected' : ''}" data-vehicle-id="${v.id}">
           <div class="roster-card-header">
@@ -241,7 +242,9 @@ export class GarageUI {
             <span class="roster-role">${v.meta.role}</span>
           </div>
           <div class="roster-card-footer">
-            <span class="roster-badge unlocked">✓ UNLOCKED</span>
+            <span class="roster-badge ${isPending ? 'pending' : 'unlocked'}" style="${isPending ? 'background: rgba(210,153,34,0.15); color: #d29922; border: 1px solid rgba(210,153,34,0.4);' : ''}">
+              ${isPending ? '⏳ MODEL NEEDED' : '✓ READY TO RACE'}
+            </span>
             <span class="roster-drivetrain">${v.config.transmission.driveType} • ${Math.round(v.config.engine.power)} HP</span>
           </div>
         </button>
@@ -295,8 +298,12 @@ export class GarageUI {
     // Render stats
     this.statsPanel.render(def, compareDef);
 
-    // Render customization
-    this.customizationPanel.render(customization);
+    // Render customization: only applicable channels for this vehicle!
+    this.customizationPanel.render(
+      customization,
+      def.visuals.applicableCustomizations ?? (def.visuals.supportsAdvancedCustomization ? { primaryColor: true, secondaryColor: true, accentColor: true, wheelColor: true } : { primaryColor: true, wheelColor: true }),
+      def.name
+    );
 
     // Render tech specs
     this.renderTechSpecs(def);

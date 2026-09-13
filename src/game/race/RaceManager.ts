@@ -34,10 +34,13 @@ export class RaceManager {
     this.positionManager.registerParticipant('player', 'YOU', true);
   }
 
+  private lastEmittedCountdown: string = '';
+
   public reset(): void {
     this.state = RaceState.COUNTDOWN;
     this.countdownRemaining = this.config.countdownDuration;
     this.countdownText = '3';
+    this.lastEmittedCountdown = '';
     this.goBannerTimer = 0;
 
     this.timer.reset();
@@ -74,6 +77,14 @@ export class RaceManager {
         this.state = RaceState.RACING;
         this.timer.start();
         this.events.emit(RaceEventType.RACE_STARTED);
+      }
+
+      if (this.countdownText !== this.lastEmittedCountdown) {
+        this.lastEmittedCountdown = this.countdownText;
+        this.events.emit(RaceEventType.COUNTDOWN_TICK, {
+          text: this.countdownText,
+          isGo: this.countdownText === 'GO!'
+        });
       }
     } else if (this.state === RaceState.RACING || this.state === RaceState.FINISHED) {
       // 2. Race Timing

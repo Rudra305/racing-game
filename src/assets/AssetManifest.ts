@@ -431,76 +431,21 @@ export const POLYFORK_ASSET_MANIFEST: GameAssetDefinition[] = [
     proceduralFallback: () => ProceduralAssets.createSpeedSignGeometry()
   },
 
-  // --- Vehicles (Player 3D Models) ---
+  // --- Vehicles (Authentic High-Fidelity 3D Models) ---
   {
-    id: 'muscle-car-60s',
-    name: '1960s Apex Muscle GT',
-    source: 'polyfork',
-    sourceUrl: 'https://polyfork.dev/asset/muscle-car-60s-524d46',
+    id: 'porsche-930-turbo',
+    name: '1982 Porsche 911 Turbo 3.3',
+    source: 'sketchfab',
+    sourceUrl: 'https://skfb.ly/pN8EX',
     category: 'vehicle',
-    path: '/assets/models/polyfork/vehicles/muscle-car-60s.glb',
-    license: 'Polyfork Standard Asset License',
-    triangles: 4271,
-    dimensions: { x: 2.01, y: 1.27, z: 4.74 }
-  },
-  {
-    id: 'hatchback-80s',
-    name: '1980s Terra Rally Hatch',
-    source: 'polyfork',
-    sourceUrl: 'https://polyfork.dev/asset/hatchback-80s-e95554',
-    category: 'vehicle',
-    path: '/assets/models/polyfork/vehicles/hatchback-80s.glb',
-    license: 'Polyfork Standard Asset License',
-    triangles: 3633,
-    dimensions: { x: 1.97, y: 1.56, z: 4.21 }
-  },
-  {
-    id: 'suburban-pickup',
-    name: 'Titan Suburban 4x4',
-    source: 'polyfork',
-    sourceUrl: 'https://polyfork.dev/asset/suburban-pickup-truck-d15ea2',
-    category: 'vehicle',
-    path: '/assets/models/polyfork/vehicles/suburban-pickup.glb',
-    license: 'Polyfork Standard Asset License',
-    triangles: 2339,
-    dimensions: { x: 2.0, y: 1.9, z: 5.6 }
-  },
-  {
-    id: 'scout-jeep',
-    name: 'Crossfire Scout Jeep',
-    source: 'polyfork',
-    sourceUrl: 'https://polyfork.dev/asset/scout-jeep-c02efe',
-    category: 'vehicle',
-    path: '/assets/models/polyfork/vehicles/scout-jeep.glb',
-    license: 'Polyfork Standard Asset License',
-    triangles: 1772,
-    dimensions: { x: 1.85, y: 1.78, z: 3.8 }
-  },
-  {
-    id: 'police-cruiser',
-    name: 'Vortex Interceptor Cruiser',
-    source: 'polyfork',
-    sourceUrl: 'https://polyfork.dev/asset/police-cruiser-a2d25e',
-    category: 'vehicle',
-    path: '/assets/models/polyfork/vehicles/police-cruiser.glb',
-    license: 'Polyfork Standard Asset License',
-    triangles: 2130,
-    dimensions: { x: 2.05, y: 1.48, z: 4.95 }
-  },
-  {
-    id: 'convertible-60s',
-    name: 'Venom GT Convertible',
-    source: 'polyfork',
-    sourceUrl: 'https://polyfork.dev/asset/convertible-60s-b76f89',
-    category: 'vehicle',
-    path: '/assets/models/polyfork/vehicles/convertible-60s.glb',
-    license: 'Polyfork Standard Asset License',
-    triangles: 4880,
-    dimensions: { x: 2.18, y: 1.43, z: 5.3 }
+    path: '/assets/models/vehicles/porsche-930-turbo.glb',
+    license: 'CC-BY-4.0 (007)',
+    triangles: 54000,
+    dimensions: { x: 1.78, y: 1.31, z: 4.29 }
   },
   {
     id: 'ferrari-gt',
-    name: 'Ferrari 458 Hyper GT',
+    name: 'Ferrari 296 GTB Assetto Fiorano',
     source: 'threejs',
     sourceUrl: 'https://github.com/mrdoob/three.js/tree/dev/examples/models/gltf',
     category: 'vehicle',
@@ -510,48 +455,103 @@ export const POLYFORK_ASSET_MANIFEST: GameAssetDefinition[] = [
     dimensions: { x: 1.94, y: 1.21, z: 4.52 }
   },
   {
-    id: 'race-car',
-    name: 'Apex GT Cup Racer',
-    source: 'kenney',
-    sourceUrl: 'https://kenney.nl/assets/car-kit',
+    id: 'toyota-supra-rz',
+    name: 'Toyota Supra RZ (A80 / Mk4)',
+    source: 'sketchfab',
+    sourceUrl: 'https://sketchfab.com/3d-models/toyota-supra-rz-custom-1332b5276b9742d48cdad5d26cca9b9b',
     category: 'vehicle',
-    path: '/assets/models/vehicles/race-car.gltf',
-    license: 'CC0 1.0 Universal (Public Domain)',
-    triangles: 1240,
-    dimensions: { x: 1.6, y: 1.1, z: 4.2 }
+    path: '/assets/models/vehicles/toyota-supra-rz.glb',
+    license: 'CC-BY-4.0 (Asphalt 8 Textures)',
+    triangles: 31381,
+    dimensions: { x: 1.81, y: 1.27, z: 4.52 }
   },
   {
-    id: 'race-future',
-    name: 'Velocity Aero Formula',
-    source: 'kenney',
-    sourceUrl: 'https://kenney.nl/assets/car-kit',
+    id: 'toyota-gr-supra-pandem',
+    name: '2023 Toyota GR Supra RZ Pandem',
+    source: 'sketchfab',
+    sourceUrl: 'https://sketchfab.com/3d-models/2023-toyota-gr-supra-rz-db42-pandem-kit-1fa7b2dc48f340878d9e5aaf1000971d',
     category: 'vehicle',
-    path: '/assets/models/vehicles/race-future.gltf',
-    license: 'CC0 1.0 Universal (Public Domain)',
-    triangles: 1380,
-    dimensions: { x: 1.65, y: 0.9, z: 4.4 }
+    path: '/assets/models/vehicles/toyota-gr-supra-pandem.glb',
+    license: 'CC-BY-NC-4.0 (SIU Car Garage)',
+    triangles: 40957,
+    dimensions: { x: 1.86, y: 1.29, z: 4.38 }
   },
   {
-    id: 'sports-sedan',
-    name: 'Apex Sport Sedan',
-    source: 'kenney',
-    sourceUrl: 'https://kenney.nl/assets/car-kit',
+    id: 'mclaren-765lt',
+    name: '2020 McLaren 765LT',
+    source: 'sketchfab',
+    sourceUrl: 'https://sketchfab.com/3d-models/2020-mclaren-765lt-2f973f267a5e4816b561abe8d8a60054',
     category: 'vehicle',
-    path: '/assets/models/vehicles/sports-sedan.gltf',
-    license: 'CC0 1.0 Universal (Public Domain)',
-    triangles: 1190,
-    dimensions: { x: 1.6, y: 1.2, z: 4.1 }
+    path: '/assets/models/vehicles/mclaren-765lt.glb',
+    license: 'CC-BY-NC-SA-4.0 (OUTPISTON)',
+    triangles: 45494,
+    dimensions: { x: 2.16, y: 1.16, z: 4.60 }
   },
   {
-    id: 'suv-luxury',
-    name: 'Kodiak Luxury Sport SUV',
-    source: 'kenney',
-    sourceUrl: 'https://kenney.nl/assets/car-kit',
+    id: 'mitsubishi-lancer-evo-6',
+    name: 'Mitsubishi Lancer Evolution VI',
+    source: 'sketchfab',
+    sourceUrl: 'https://sketchfab.com/3d-models/mitsubishi-lancer-evolution-6-wwwvecarzcom-c3d5dcd8ff724bc88c46760d92fc5188',
     category: 'vehicle',
-    path: '/assets/models/vehicles/suv-luxury.gltf',
-    license: 'CC0 1.0 Universal (Public Domain)',
-    triangles: 1410,
-    dimensions: { x: 1.7, y: 1.45, z: 4.3 }
+    path: '/assets/models/vehicles/mitsubishi-lancer-evo-6.glb',
+    license: 'CC-BY-4.0 (vecarz)',
+    triangles: 80904,
+    dimensions: { x: 1.77, y: 1.42, z: 4.35 }
+  },
+  {
+    id: 'mitsubishi-lancer-evo-tme',
+    name: '1999 Mitsubishi Lancer Evolution VI GSR T.M.E.',
+    source: 'sketchfab',
+    sourceUrl: 'https://sketchfab.com/3d-models/1999-mitsubishi-lancer-evolution-vi-gsr-tme-d565cdb23b864308acc9678baa05d5d3',
+    category: 'vehicle',
+    path: '/assets/models/vehicles/mitsubishi-lancer-evo-tme.glb',
+    license: 'CC-BY-NC-4.0 (SIU Car Garage)',
+    triangles: 43747,
+    dimensions: { x: 1.77, y: 1.42, z: 4.35 }
+  },
+  {
+    id: 'subaru-impreza-22b',
+    name: '1998 Subaru Impreza 22B STi Version',
+    source: 'sketchfab',
+    sourceUrl: 'https://sketchfab.com/3d-models/1998-subaru-impreza-22b-sti-version-66bd94bdd92a4b79a39cd0307870b4eb',
+    category: 'vehicle',
+    path: '/assets/models/vehicles/subaru-impreza-22b.glb',
+    license: 'CC-BY-NC-SA-4.0 (OUTPISTON)',
+    triangles: 73162,
+    dimensions: { x: 1.77, y: 1.39, z: 4.37 }
+  },
+  {
+    id: 'ford-f150-raptor-r',
+    name: '2010 Ford F-150 SVT Raptor R',
+    source: 'sketchfab',
+    sourceUrl: 'https://sketchfab.com/3d-models/2010-ford-f-150-svt-raptor-r-b7e63d376e59453490907cebbd44ab72',
+    category: 'vehicle',
+    path: '/assets/models/vehicles/ford-f150-raptor-r.glb',
+    license: 'CC-BY-4.0 (Galaxy Car Showroom)',
+    triangles: 78840,
+    dimensions: { x: 2.19, y: 1.99, z: 5.61 }
+  },
+  {
+    id: 'mclaren-mcl35m-f1',
+    name: 'McLaren MCL35M (F1 2021)',
+    source: 'sketchfab',
+    sourceUrl: 'https://sketchfab.com/3d-models/f1-2021-mclaren-mcl35m-967ecec37468412083c40c62b3d7234d',
+    category: 'vehicle',
+    path: '/assets/models/vehicles/mclaren-mcl35m-f1.glb',
+    license: 'CC-BY-4.0 (Excalibur)',
+    triangles: 102081,
+    dimensions: { x: 2.00, y: 0.95, z: 5.68 }
+  },
+  {
+    id: 'red-bull-f1',
+    name: 'Red Bull Racing F1 (RB16B)',
+    source: 'sketchfab',
+    sourceUrl: 'https://sketchfab.com/3d-models/red-bull-racing-but-with-detached-tyres-949c8dca6fbe4b76a4739dda69ecf0c0',
+    category: 'vehicle',
+    path: '/assets/models/vehicles/red-bull-f1.glb',
+    license: 'CC-BY-4.0 (Jan Esch)',
+    triangles: 44156,
+    dimensions: { x: 2.00, y: 0.95, z: 5.50 }
   }
 ];
 

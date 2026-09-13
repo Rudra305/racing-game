@@ -1,6 +1,6 @@
 import { AIRacingLine } from './AIRacingLine';
 import { AITargeting } from './AITargeting';
-import { AISteering } from './AISteering';
+import { AISteering, AISteeringParams } from './AISteering';
 import { AISpeedController } from './AISpeedController';
 import { AIRecovery } from './AIRecovery';
 import { AICollisionAvoidance, NearbyVehicleInfo } from './AICollisionAvoidance';
@@ -18,6 +18,8 @@ export class AIController {
   // Driver personalized line preference
   public driverLineOffset: number = 0;
   private isEnabled: boolean = false;
+  private errorTimer: number = 0;
+  private currentError: number = 0;
 
   constructor(lineOffset: number = 0) {
     this.driverLineOffset = lineOffset;
@@ -31,6 +33,9 @@ export class AIController {
     this.steering.reset();
     this.speedController.reset();
     this.recovery.reset();
+    this.avoidance.reset();
+    this.errorTimer = 0;
+    this.currentError = 0;
   }
 
   /**
@@ -61,17 +66,33 @@ export class AIController {
       return;
     }
 
-    // 2. Collision avoidance
+    // 2. Collision avoidance with road boundary protection
     const avoidanceOut = this.avoidance.computeAvoidance(
       physics.position,
       physics.trackDistance,
       physics.trackLateralDist,
+      physics.trackHalfWidth,
       sampler.totalLength,
-      nearbyVehicles
+      nearbyVehicles,
+      profile.overtakeAggression,
+      dt
     );
 
-    // 3. Look-ahead targeting
-    const totalLateralOffset = (this.driverLineOffset * profile.lineOffsetMax) + avoidanceOut.lateralOffset;
+    // 3. Subtle human variance error model (active on easier difficulties)
+    this.errorTimer += dt;
+    if (this.errorTimer > 1.2) {
+      this.errorTimer = 0;
+      if (Math.random() < profile.errorProbability) {
+        this.currentError = (Math.random() * 2.0 - 1.0) * profile.errorIntensity;
+      } else {
+        this.currentError *= 0.5;
+      }
+    }
+
+    // 4. Look-ahead targeting along optimized racing line
+    const driverOffset = (this.driverLineOffset * profile.lineOffsetMax * (1.0 - profile.apexStrictness * 0.5));
+    const totalLateralOffset = driverOffset + avoidanceOut.lateralOffset + this.currentError;
+
     const target = this.targeting.getTarget(
       racingLine,
       physics.trackDistance,
@@ -80,37 +101,59 @@ export class AIController {
       profile.lookAheadFactor
     );
 
-    // 4. Steering computation
+    // 5. Stanley path tracking steering with yaw damping
+    const steerParams: AISteeringParams = {
+      pGain: profile.steeringP,
+      dGain: profile.steeringD,
+      crossTrackGain: profile.crossTrackK,
+      smoothingRate: profile.steeringSmoothing
+    };
+
     const steer = this.steering.computeSteering(
       physics.position,
       physics.heading,
+      physics.forwardSpeed,
+      physics.yawRate,
       target.position,
-      profile.steeringSmoothing,
+      target.tangent,
+      target.normal,
+      steerParams,
       dt
     );
 
-    // 5. Speed computation with anticipatory corner braking
+    // 6. Dynamic speed control along precomputed racing envelope
     const localPoint = racingLine.getPointAtDistance(physics.trackDistance);
-    // Take minimum of local envelope speed (anticipates upcoming braking points) and look-ahead speed
-    const safeTargetSpeed = Math.min(localPoint.targetSpeed, target.targetSpeed);
-    const adjustedTargetSpeed = safeTargetSpeed * profile.targetSpeedFactor * avoidanceOut.speedMultiplier;
+
+    // In Hard/Expert, cars brake at the true physical threshold without premature crawling.
+    // In Easy/Normal, cars anticipate corner entry with modest driver margin.
+    let envelopeSpeed = localPoint.targetSpeed;
+    if (profile.brakingDistanceMultiplier > 1.05) {
+      const marginDist = Math.min(16.0, Math.abs(physics.forwardSpeed) * 0.40 * (profile.brakingDistanceMultiplier - 1.0));
+      const lookaheadPoint = racingLine.getPointAtDistance(physics.trackDistance + marginDist);
+      envelopeSpeed = Math.min(envelopeSpeed, lookaheadPoint.targetSpeed);
+    }
+
+    const scaledTargetSpeed = envelopeSpeed * profile.targetSpeedFactor * avoidanceOut.speedMultiplier;
+    const cappedTargetSpeed = Math.min(profile.maxSpeedCapMs, scaledTargetSpeed);
+
     const speedControls = this.speedController.computeControls(
       physics.forwardSpeed,
-      adjustedTargetSpeed,
+      cappedTargetSpeed,
       profile.brakingAggression,
       physics.isOffRoad,
       dt
     );
 
-    // Modulate corner exit throttle: smoothly ramp throttle as wheel straightens
+    // 7. Modulate corner exit throttle: full commitment on exit
     let finalThrottle = speedControls.throttle;
-    if (Math.abs(steer) > 0.48 && physics.forwardSpeed > 14.0) {
-      finalThrottle *= 0.82; // Balance car mid-corner
-    } else if (Math.abs(steer) < 0.22 && speedControls.throttle > 0.15) {
-      finalThrottle = Math.min(1.0, finalThrottle * profile.cornerExitAggression);
+    const isExtremeSlide = Math.abs(physics.lateralG) > 1.6 && Math.abs(steer) > 0.55;
+    if (isExtremeSlide && physics.forwardSpeed > 20.0) {
+      finalThrottle *= 0.85; // Modulate only during excessive lateral slip to avoid spinout
+    } else if (Math.abs(steer) < 0.35 && speedControls.throttle > 0.10) {
+      finalThrottle = Math.min(1.0, finalThrottle * profile.cornerExitAggression * 1.15);
     }
 
-    // 6. Set inputs directly on existing VehiclePhysics
+    // 8. Set inputs directly on existing VehiclePhysics
     physics.setInputs(
       finalThrottle,
       speedControls.brake,

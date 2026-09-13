@@ -4,6 +4,13 @@ import { VehicleCustomization, WheelConfig } from './VehicleCustomization';
 
 export type VehicleBodyType = 'sports' | 'supercar' | 'rally' | 'suv' | 'formula';
 
+export interface VehicleCustomizationCapabilities {
+  primaryColor?: boolean;    // Primary Body Paint
+  secondaryColor?: boolean;  // Cabin / Canopy / Roof / Splitter
+  accentColor?: boolean;     // Calipers / Aerodynamic Accents
+  wheelColor?: boolean;      // Wheels / Rims Color
+}
+
 export interface VehicleVisualDefinition {
   bodyType: VehicleBodyType;
   defaultColors: VehicleCustomization;
@@ -11,9 +18,14 @@ export interface VehicleVisualDefinition {
   modelAssetId?: string;
   modelUrl?: string;
   thumbnailUrl?: string;
+  modelRotationX?: number;
   modelRotationY?: number;
+  modelRotationZ?: number;
   modelScaleMultiplier?: number;
   modelOffsetY?: number;
+  supportsAdvancedCustomization?: boolean;
+  applicableCustomizations?: VehicleCustomizationCapabilities;
+  isModelPending?: boolean;
 }
 
 export interface VehicleMetadata {

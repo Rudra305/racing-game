@@ -13,45 +13,90 @@ export interface AvoidanceOutput {
 }
 
 export class AICollisionAvoidance {
+  private smoothedOffset: number = 0;
+
+  public reset(): void {
+    this.smoothedOffset = 0;
+  }
+
   public computeAvoidance(
     _myPos: THREE.Vector3,
     myDistance: number,
     myLateralDist: number,
+    trackHalfWidth: number,
     trackLength: number,
-    otherVehicles: NearbyVehicleInfo[]
+    otherVehicles: NearbyVehicleInfo[],
+    overtakeAggression: number = 0.7,
+    dt: number = 0.06
   ): AvoidanceOutput {
-    let desiredOffset = 0;
+    let targetOffset = 0;
     let speedMultiplier = 1.0;
 
+    // Usable road boundaries leaving safety margin from kerbs/barriers
+    const safeMargin = 1.35;
+    const maxAllowedLateral = Math.max(1.0, trackHalfWidth - safeMargin);
+
     for (const other of otherVehicles) {
-      // Longitudinal distance ahead
+      // Longitudinal distance ahead along the circuit
       let distAhead = other.distanceAlongTrack - myDistance;
       if (distAhead < -trackLength * 0.5) distAhead += trackLength;
       if (distAhead > trackLength * 0.5) distAhead -= trackLength;
 
-      // 1. Vehicle directly ahead in braking/following zone (0m to 14m)
-      if (distAhead > 0.8 && distAhead < 14.0) {
+      // 1. Forward radar: vehicle ahead in braking / drafting zone (1.0m to 22.0m)
+      if (distAhead > 0.8 && distAhead < 22.0) {
         const lateralDelta = other.lateralDist - myLateralDist;
-        if (Math.abs(lateralDelta) < 2.4) {
-          // In our path: slow down and plan pass to the more open side
-          speedMultiplier = Math.min(speedMultiplier, Math.max(0.4, distAhead / 14.0));
-          // Steer away from other car
-          desiredOffset += lateralDelta > 0 ? -1.4 : 1.4;
+        const inCorridor = Math.abs(lateralDelta) < 2.5;
+
+        if (inCorridor) {
+          // Speed matching: smoothly match speed if closing in too quickly
+          const safeSpeedRatio = Math.max(0.65, distAhead / 18.0);
+          speedMultiplier = Math.min(speedMultiplier, safeSpeedRatio);
+
+          // Evaluate which side has more clear asphalt to pass
+          const spaceLeft = myLateralDist - (-maxAllowedLateral);
+          const spaceRight = maxAllowedLateral - myLateralDist;
+
+          // Higher overtakeAggression prioritizes passing over cautious following
+          const passOffset = 1.8 * Math.min(1.2, 0.6 + overtakeAggression * 0.6);
+          if (spaceRight > spaceLeft && spaceRight > 1.8) {
+            targetOffset += passOffset;
+          } else if (spaceLeft > 1.8) {
+            targetOffset -= passOffset;
+          } else {
+            // Narrow section: stay behind and slipstream safely
+            targetOffset += spaceRight > spaceLeft ? 0.8 : -0.8;
+          }
         }
       }
 
-      // 2. Vehicle abreast / side-by-side (-3.0m to +3.0m)
-      if (Math.abs(distAhead) < 3.8) {
+      // 2. Side-by-side radar: vehicles abreast (-3.5m to +3.5m)
+      if (Math.abs(distAhead) < 4.0) {
         const sideDelta = other.lateralDist - myLateralDist;
-        if (Math.abs(sideDelta) < 2.6) {
-          // Push slightly away
-          desiredOffset += sideDelta > 0 ? -1.0 : 1.0;
+        if (Math.abs(sideDelta) < 2.8) {
+          // Gentle lateral cushion away from adjacent car
+          const cushion = (2.8 - Math.abs(sideDelta)) * 0.75;
+          targetOffset += sideDelta > 0 ? -cushion : cushion;
         }
       }
     }
 
+    // 3. Absolute boundary clamping: NEVER allow avoidance to push car into a wall
+    const projectedLateral = myLateralDist + targetOffset;
+    if (projectedLateral > maxAllowedLateral) {
+      targetOffset = maxAllowedLateral - myLateralDist;
+    } else if (projectedLateral < -maxAllowedLateral) {
+      targetOffset = -maxAllowedLateral - myLateralDist;
+    }
+
+    // Clamp total dynamic offset range
+    targetOffset = Math.max(-2.6, Math.min(2.6, targetOffset));
+
+    // 4. Smooth temporal filter (3.8 rad/s) prevents jerky steering oscillation
+    const blend = 1.0 - Math.exp(-4.2 * dt);
+    this.smoothedOffset += (targetOffset - this.smoothedOffset) * blend;
+
     return {
-      lateralOffset: Math.max(-2.5, Math.min(2.5, desiredOffset)),
+      lateralOffset: this.smoothedOffset,
       speedMultiplier
     };
   }
