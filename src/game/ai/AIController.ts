@@ -47,7 +47,8 @@ export class AIController {
     sampler: TrackSampler,
     profile: AIDifficultyProfile,
     nearbyVehicles: NearbyVehicleInfo[],
-    dt: number
+    dt: number,
+    selfVehicleIndex?: number
   ): void {
     if (!this.isEnabled) {
       physics.setInputs(0, 0, 0, false);
@@ -75,7 +76,8 @@ export class AIController {
       sampler.totalLength,
       nearbyVehicles,
       profile.overtakeAggression,
-      dt
+      dt,
+      selfVehicleIndex
     );
 
     // 3. Subtle human variance error model (active on easier difficulties)

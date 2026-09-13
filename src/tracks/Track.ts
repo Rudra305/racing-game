@@ -41,6 +41,7 @@ export class Track {
   private readonly _interpPos: THREE.Vector3 = new THREE.Vector3();
   private readonly _interpRight: THREE.Vector3 = new THREE.Vector3();
   private readonly _interpNormal: THREE.Vector3 = new THREE.Vector3();
+  private readonly _barrierCollisionResult = { collided: false, normal: new THREE.Vector3(), penetration: 0 };
 
   constructor(definition: TrackDefinition) {
     this.definition = definition;
@@ -247,11 +248,10 @@ export class Track {
     hintIndex?: number
   ): { collided: boolean; normal: THREE.Vector3; penetration: number } {
     const res = this.checkBoundary(position, carHalfWidth, hintIndex);
-    return {
-      collided: res.collidedWithBarrier,
-      normal: res.barrierNormal,
-      penetration: res.penetration
-    };
+    this._barrierCollisionResult.collided = res.collidedWithBarrier;
+    this._barrierCollisionResult.normal.copy(res.barrierNormal);
+    this._barrierCollisionResult.penetration = res.penetration;
+    return this._barrierCollisionResult;
   }
 
   /**
@@ -311,6 +311,17 @@ export class Track {
 
     // Terrain
     this.terrain.dispose();
+
+    // Checkpoint debug visuals
+    this.checkpointDebugGroup.traverse((obj) => {
+      const m = obj as THREE.Mesh;
+      if (m.geometry) m.geometry.dispose();
+      if (m.material) {
+        if (Array.isArray(m.material)) m.material.forEach((mat) => mat.dispose());
+        else m.material.dispose();
+      }
+    });
+    this.checkpointDebugGroup.clear();
 
     // Remove all children
     while (this.group.children.length > 0) {

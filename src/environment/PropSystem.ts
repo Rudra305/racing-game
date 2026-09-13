@@ -52,9 +52,9 @@ export class PropSystem {
     }
 
     if (transforms.length > 0) {
-      const geo = ProceduralAssets.createGuardrailSegmentGeometry(4.5);
+      const geo = ProceduralAssets.getGuardrailSegmentGeometry(4.5);
       const instancedMesh = new THREE.InstancedMesh(geo, ProceduralAssets.steelMaterial, transforms.length);
-      instancedMesh.castShadow = true;
+      instancedMesh.castShadow = false; // Selective shadow optimization
       instancedMesh.receiveShadow = true;
 
       for (let idx = 0; idx < transforms.length; idx++) {
@@ -98,7 +98,7 @@ export class PropSystem {
     }
 
     if (transforms.length > 0) {
-      const geo = ProceduralAssets.createReflectorPostGeometry();
+      const geo = ProceduralAssets.getReflectorPostGeometry();
       const instanced = new THREE.InstancedMesh(geo, ProceduralAssets.steelMaterial, transforms.length);
       instanced.receiveShadow = true;
 
@@ -280,9 +280,9 @@ export class PropSystem {
     }
 
     if (transforms.length > 0) {
-      const geo = ProceduralAssets.createTireBarrierStackGeometry();
+      const geo = ProceduralAssets.getTireBarrierStackGeometry();
       const instancedMesh = new THREE.InstancedMesh(geo, ProceduralAssets.rubberMaterial, transforms.length);
-      instancedMesh.castShadow = true;
+      instancedMesh.castShadow = false; // Selective shadow optimization
       instancedMesh.receiveShadow = true;
 
       for (let idx = 0; idx < transforms.length; idx++) {
@@ -343,13 +343,20 @@ export class PropSystem {
         markerGroup.rotation.y = heading + Math.PI;
 
         this.group.add(markerGroup);
+        markerGroup.traverse(child => {
+          if ((child as THREE.Mesh).isMesh) {
+            this.meshes.push(child as THREE.Mesh);
+          }
+        });
       }
     }
   }
 
   public dispose(): void {
     for (const m of this.meshes) {
-      if (m.geometry) m.geometry.dispose();
+      if ((m as THREE.InstancedMesh).isInstancedMesh) {
+        (m as THREE.InstancedMesh).dispose();
+      }
     }
     while (this.group.children.length > 0) {
       this.group.remove(this.group.children[0]);

@@ -1,3 +1,4 @@
+import * as THREE from 'three';
 import { TrackSampler, TrackSample } from '../../tracks/TrackSampler';
 import { VehiclePhysics } from '../../physics/VehiclePhysics';
 
@@ -12,6 +13,9 @@ export class AIRecovery {
   private stuckTimer: number = 0;
   private recoveryDuration: number = 0;
   private totalStuckDuration: number = 0;
+
+  private readonly _scratchPos: THREE.Vector3 = new THREE.Vector3();
+  private readonly _result = { isRecovering: false, throttle: 0, brake: 0, steer: 0 };
 
   public reset(): void {
     this.state = AIRecoveryState.NONE;
@@ -54,12 +58,16 @@ export class AIRecovery {
       this.totalStuckDuration += dt;
       if (this.totalStuckDuration > 4.8) {
         // Reset directly onto track centerline with forward orientation
-        const safeRespawnPos = closestSample.position.clone();
-        safeRespawnPos.y += 0.25;
-        physics.setSpawn(safeRespawnPos, trackAngle);
+        this._scratchPos.copy(closestSample.position);
+        this._scratchPos.y += 0.25;
+        physics.setSpawn(this._scratchPos, trackAngle);
         physics.forwardSpeed = 8.0; // Rolling restart
         this.reset();
-        return { isRecovering: false, throttle: 0.8, brake: 0, steer: 0 };
+        this._result.isRecovering = false;
+        this._result.throttle = 0.8;
+        this._result.brake = 0;
+        this._result.steer = 0;
+        return this._result;
       }
     } else {
       this.totalStuckDuration = Math.max(0, this.totalStuckDuration - dt * 1.5);
@@ -78,7 +86,11 @@ export class AIRecovery {
         this.stuckTimer = Math.max(0, this.stuckTimer - dt * 2.5);
       }
 
-      return { isRecovering: false, throttle: 0, brake: 0, steer: 0 };
+      this._result.isRecovering = false;
+      this._result.throttle = 0;
+      this._result.brake = 0;
+      this._result.steer = 0;
+      return this._result;
     }
 
     // 2. Active Recovery State Machine
@@ -93,12 +105,11 @@ export class AIRecovery {
       // In reverse, steering opposite to headingError rotates car nose toward the track heading
       const reverseSteer = headingError > 0 ? -0.85 : 0.85;
 
-      return {
-        isRecovering: true,
-        throttle: 0,
-        brake: 0.85, // S/Brake engages reverse when stationary
-        steer: reverseSteer
-      };
+      this._result.isRecovering = true;
+      this._result.throttle = 0;
+      this._result.brake = 0.85; // S/Brake engages reverse when stationary
+      this._result.steer = reverseSteer;
+      return this._result;
     }
 
     if (this.state === AIRecoveryState.REALIGNING) {
@@ -121,14 +132,17 @@ export class AIRecovery {
 
       const steer = Math.max(-1.0, Math.min(1.0, realignError * 2.2));
 
-      return {
-        isRecovering: true,
-        throttle: 0.65 * recoverySpeedFactor,
-        brake: 0,
-        steer
-      };
+      this._result.isRecovering = true;
+      this._result.throttle = 0.65 * recoverySpeedFactor;
+      this._result.brake = 0;
+      this._result.steer = steer;
+      return this._result;
     }
 
-    return { isRecovering: false, throttle: 0, brake: 0, steer: 0 };
+    this._result.isRecovering = false;
+    this._result.throttle = 0;
+    this._result.brake = 0;
+    this._result.steer = 0;
+    return this._result;
   }
 }

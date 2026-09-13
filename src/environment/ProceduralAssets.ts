@@ -135,6 +135,109 @@ export class ProceduralAssets {
     metalness: 0.15
   });
 
+  // Global singleton geometry and texture caches to eliminate GPU duplicate uploads
+  private static geometryCache: Map<string, THREE.BufferGeometry> = new Map();
+  private static brakeMarkerTextures: Map<number, THREE.CanvasTexture> = new Map();
+  private static brakeMarkerMaterials: Map<number, THREE.MeshStandardMaterial> = new Map();
+  private static brakeMarkerBoardGeo: THREE.BufferGeometry | null = null;
+  private static brakeMarkerPostGeo: THREE.BufferGeometry | null = null;
+
+  public static getFirGeometry(lod: 0 | 1 | 2): THREE.BufferGeometry {
+    const key = `fir_${lod}`;
+    if (!this.geometryCache.has(key)) this.geometryCache.set(key, this.createFirGeometry(lod));
+    return this.geometryCache.get(key)!;
+  }
+
+  public static getPineGeometry(lod: 0 | 1 | 2): THREE.BufferGeometry {
+    const key = `pine_${lod}`;
+    if (!this.geometryCache.has(key)) this.geometryCache.set(key, this.createPineGeometry(lod));
+    return this.geometryCache.get(key)!;
+  }
+
+  public static getBirchGeometry(lod: 0 | 1 | 2): THREE.BufferGeometry {
+    const key = `birch_${lod}`;
+    if (!this.geometryCache.has(key)) this.geometryCache.set(key, this.createBirchGeometry(lod));
+    return this.geometryCache.get(key)!;
+  }
+
+  public static getBushGeometry(lod: 0 | 1): THREE.BufferGeometry {
+    const key = `bush_${lod}`;
+    if (!this.geometryCache.has(key)) this.geometryCache.set(key, this.createBushGeometry(lod));
+    return this.geometryCache.get(key)!;
+  }
+
+  public static getFernGeometry(): THREE.BufferGeometry {
+    const key = 'fern';
+    if (!this.geometryCache.has(key)) this.geometryCache.set(key, this.createFernGeometry());
+    return this.geometryCache.get(key)!;
+  }
+
+  public static getGrassGeometry(): THREE.BufferGeometry {
+    const key = 'grass';
+    if (!this.geometryCache.has(key)) this.geometryCache.set(key, this.createGrassGeometry());
+    return this.geometryCache.get(key)!;
+  }
+
+  public static getRockGeometry(variant: 0 | 1): THREE.BufferGeometry {
+    const key = `rock_${variant}`;
+    if (!this.geometryCache.has(key)) this.geometryCache.set(key, this.createRockGeometry(variant));
+    return this.geometryCache.get(key)!;
+  }
+
+  public static getSaguaroCactusGeometry(lod: 0 | 1 | 2): THREE.BufferGeometry {
+    const key = `cactus_${lod}`;
+    if (!this.geometryCache.has(key)) this.geometryCache.set(key, this.createSaguaroCactusGeometry(lod));
+    return this.geometryCache.get(key)!;
+  }
+
+  public static getPalmTreeGeometry(lod: 0 | 1 | 2): THREE.BufferGeometry {
+    const key = `palm_${lod}`;
+    if (!this.geometryCache.has(key)) this.geometryCache.set(key, this.createPalmTreeGeometry(lod));
+    return this.geometryCache.get(key)!;
+  }
+
+  public static getDesertScrubGeometry(): THREE.BufferGeometry {
+    const key = 'desert_scrub';
+    if (!this.geometryCache.has(key)) this.geometryCache.set(key, this.createDesertScrubGeometry());
+    return this.geometryCache.get(key)!;
+  }
+
+  public static getSandstoneBoulderGeometry(variant: 0 | 1): THREE.BufferGeometry {
+    const key = `sandstone_rock_${variant}`;
+    if (!this.geometryCache.has(key)) this.geometryCache.set(key, this.createSandstoneBoulderGeometry(variant));
+    return this.geometryCache.get(key)!;
+  }
+
+  public static getCoastalScrubGeometry(): THREE.BufferGeometry {
+    const key = 'coastal_scrub';
+    if (!this.geometryCache.has(key)) this.geometryCache.set(key, this.createCoastalScrubGeometry());
+    return this.geometryCache.get(key)!;
+  }
+
+  public static getCoastalRockGeometry(variant: 0 | 1): THREE.BufferGeometry {
+    const key = `coastal_rock_${variant}`;
+    if (!this.geometryCache.has(key)) this.geometryCache.set(key, this.createCoastalRockGeometry(variant));
+    return this.geometryCache.get(key)!;
+  }
+
+  public static getGuardrailSegmentGeometry(length: number = 4.5): THREE.BufferGeometry {
+    const key = `guardrail_${length}`;
+    if (!this.geometryCache.has(key)) this.geometryCache.set(key, this.createGuardrailSegmentGeometry(length));
+    return this.geometryCache.get(key)!;
+  }
+
+  public static getReflectorPostGeometry(): THREE.BufferGeometry {
+    const key = 'reflector_post';
+    if (!this.geometryCache.has(key)) this.geometryCache.set(key, this.createReflectorPostGeometry());
+    return this.geometryCache.get(key)!;
+  }
+
+  public static getTireBarrierStackGeometry(): THREE.BufferGeometry {
+    const key = 'tire_barrier';
+    if (!this.geometryCache.has(key)) this.geometryCache.set(key, this.createTireBarrierStackGeometry());
+    return this.geometryCache.get(key)!;
+  }
+
   /**
    * 1. Alpine Fir Tree (LOD 0, 1, 2)
    */
@@ -525,46 +628,55 @@ export class ProceduralAssets {
   public static createBrakeMarkerMesh(distanceMeters: number): THREE.Group {
     const group = new THREE.Group();
 
-    // Post
-    const postGeo = new THREE.CylinderGeometry(0.04, 0.04, 1.4, 8);
-    postGeo.translate(0, 0.7, 0);
-    const postMesh = new THREE.Mesh(postGeo, this.steelMaterial);
-    postMesh.castShadow = true;
+    // Post (shared cached geometry)
+    if (!this.brakeMarkerPostGeo) {
+      const geo = new THREE.CylinderGeometry(0.04, 0.04, 1.4, 8);
+      geo.translate(0, 0.7, 0);
+      this.brakeMarkerPostGeo = geo;
+    }
+    const postMesh = new THREE.Mesh(this.brakeMarkerPostGeo, this.steelMaterial);
     group.add(postMesh);
 
-    // Sign Board
-    const boardGeo = new THREE.BoxGeometry(0.85, 0.75, 0.04);
-    boardGeo.translate(0, 1.15, 0);
-
-    // High-contrast procedural distance texture
-    const canvas = document.createElement('canvas');
-    canvas.width = 128;
-    canvas.height = 128;
-    const ctx = canvas.getContext('2d');
-    if (ctx) {
-      ctx.fillStyle = '#f8fafc';
-      ctx.fillRect(0, 0, 128, 128);
-      ctx.lineWidth = 8;
-      ctx.strokeStyle = '#0f172a';
-      ctx.strokeRect(4, 4, 120, 120);
-
-      ctx.fillStyle = '#0f172a';
-      ctx.font = 'bold 54px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText(distanceMeters.toString(), 64, 64);
+    // Sign Board (shared cached geometry)
+    if (!this.brakeMarkerBoardGeo) {
+      const geo = new THREE.BoxGeometry(0.85, 0.75, 0.04);
+      geo.translate(0, 1.15, 0);
+      this.brakeMarkerBoardGeo = geo;
     }
-    const texture = new THREE.CanvasTexture(canvas);
-    texture.colorSpace = THREE.SRGBColorSpace;
 
-    const boardMat = new THREE.MeshStandardMaterial({
-      map: texture,
-      roughness: 0.4,
-      metalness: 0.1
-    });
+    // High-contrast procedural distance texture (shared singleton per distance value)
+    let boardMat = this.brakeMarkerMaterials.get(distanceMeters);
+    if (!boardMat) {
+      const canvas = document.createElement('canvas');
+      canvas.width = 128;
+      canvas.height = 128;
+      const ctx = canvas.getContext('2d');
+      if (ctx) {
+        ctx.fillStyle = '#f8fafc';
+        ctx.fillRect(0, 0, 128, 128);
+        ctx.lineWidth = 8;
+        ctx.strokeStyle = '#0f172a';
+        ctx.strokeRect(4, 4, 120, 120);
 
-    const boardMesh = new THREE.Mesh(boardGeo, boardMat);
-    boardMesh.castShadow = true;
+        ctx.fillStyle = '#0f172a';
+        ctx.font = 'bold 54px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(distanceMeters.toString(), 64, 64);
+      }
+      const texture = new THREE.CanvasTexture(canvas);
+      texture.colorSpace = THREE.SRGBColorSpace;
+      this.brakeMarkerTextures.set(distanceMeters, texture);
+
+      boardMat = new THREE.MeshStandardMaterial({
+        map: texture,
+        roughness: 0.4,
+        metalness: 0.1
+      });
+      this.brakeMarkerMaterials.set(distanceMeters, boardMat);
+    }
+
+    const boardMesh = new THREE.Mesh(this.brakeMarkerBoardGeo, boardMat);
     group.add(boardMesh);
 
     return group;

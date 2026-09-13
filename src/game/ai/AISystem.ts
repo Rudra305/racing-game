@@ -29,6 +29,7 @@ export class AISystem {
   private isEnabled: boolean = false;
   private decisionTimer: number = 0;
   private readonly decisionInterval: number = 0.06; // ~16.6 Hz AI decision rate (separate from 60 Hz physics)
+  private readonly _allVehicles: NearbyVehicleInfo[] = [];
 
   constructor(
     track: Track,
@@ -106,23 +107,30 @@ export class AISystem {
 
     const profile: AIDifficultyProfile = AI_DIFFICULTY_PROFILES[this.difficulty];
 
-    // Build nearby vehicle list (player + all AI) for local avoidance
-    const allVehicles: NearbyVehicleInfo[] = [
-      {
-        position: playerPosition,
-        forwardSpeed: playerSpeed,
-        distanceAlongTrack: playerTrackDist,
-        lateralDist: playerLateralDist
-      }
-    ];
-
-    for (const opp of this.opponents) {
-      allVehicles.push({
-        position: opp.physics.position,
-        forwardSpeed: opp.physics.forwardSpeed,
-        distanceAlongTrack: opp.physics.trackDistance,
-        lateralDist: opp.physics.trackLateralDist
+    // Populate pre-allocated nearby vehicle list (slot 0 = player, slot 1..N = AI) without allocations
+    const neededLen = 1 + this.opponents.length;
+    while (this._allVehicles.length < neededLen) {
+      this._allVehicles.push({
+        position: new THREE.Vector3(),
+        forwardSpeed: 0,
+        distanceAlongTrack: 0,
+        lateralDist: 0
       });
+    }
+
+    // Update player slot 0
+    this._allVehicles[0].position = playerPosition;
+    this._allVehicles[0].forwardSpeed = playerSpeed;
+    this._allVehicles[0].distanceAlongTrack = playerTrackDist;
+    this._allVehicles[0].lateralDist = playerLateralDist;
+
+    // Update AI slots 1..N
+    for (let j = 0; j < this.opponents.length; j++) {
+      const oppPhys = this.opponents[j].physics;
+      this._allVehicles[j + 1].position = oppPhys.position;
+      this._allVehicles[j + 1].forwardSpeed = oppPhys.forwardSpeed;
+      this._allVehicles[j + 1].distanceAlongTrack = oppPhys.trackDistance;
+      this._allVehicles[j + 1].lateralDist = oppPhys.trackLateralDist;
     }
 
     // Step AI Opponents
@@ -147,15 +155,14 @@ export class AISystem {
 
       // Run AI steering, throttle, and braking decision update
       if (shouldMakeDecisions && this.isEnabled && !opp.lapManager.isFinished) {
-        // Exclude self from avoidance list
-        const others = allVehicles.filter((_, idx) => idx !== (i + 1));
         opp.controller.updateDecision(
           opp.physics,
           this.racingLine,
           this.track.sampler,
           profile,
-          others,
-          this.decisionInterval
+          this._allVehicles,
+          this.decisionInterval,
+          i + 1
         );
       } else if (opp.lapManager.isFinished) {
         // Finished AI coasts smoothly to a stop

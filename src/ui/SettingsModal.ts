@@ -6,7 +6,7 @@ export interface SettingsModalCallbacks {
   onVehiclePresetChanged: (config: VehicleConfig) => void;
   onTrackChanged: (trackId: string) => void;
   onOpenTrackModal?: () => void;
-  onQualityChanged?: (scale: number) => void;
+  onQualityChanged?: (level: 'AUTO' | 'LOW' | 'MEDIUM' | 'HIGH') => void;
   onAIDifficultyChanged?: (difficulty: AIDifficultyLevel) => void;
   onAICountChanged?: (count: number) => void;
   onWeatherChanged?: (weather: 'CLEAR' | 'CLOUDY' | 'LIGHT_RAIN' | 'HEAVY_RAIN' | 'CYCLE') => void;
@@ -132,12 +132,12 @@ export class SettingsModal {
 
         <!-- Graphics & Environment Quality -->
         <div style="margin-bottom: 20px;">
-          <label style="display: block; font-size: 11px; font-weight: 700; color: #8b949e; text-transform: uppercase; margin-bottom: 8px; letter-spacing: 0.08em;">Environment Quality (LOD & Draw Distance)</label>
+          <label style="display: block; font-size: 11px; font-weight: 700; color: #8b949e; text-transform: uppercase; margin-bottom: 8px; letter-spacing: 0.08em;">Graphics Quality</label>
           <select id="setting-graphics-preset" style="width: 100%; background: #161d27; border: 1px solid rgba(255,255,255,0.15); color: #fff; padding: 8px 12px; border-radius: 6px; font-size: 13px; font-family: monospace; cursor: pointer;">
-            <option value="1.0" selected>High (Recommended — Balanced 60 FPS)</option>
-            <option value="0.75">Low (Entry GPU / Increased Performance)</option>
-            <option value="0.88">Medium (Mid-Range Hardware)</option>
-            <option value="1.25">Ultra (Extended Range & High Density)</option>
+            <option value="AUTO">AUTO (Dynamic Performance Guard)</option>
+            <option value="HIGH" selected>HIGH (Full Visual Fidelity — 2048 Shadows)</option>
+            <option value="MEDIUM">MEDIUM (Balanced 60 FPS — 1024 Shadows)</option>
+            <option value="LOW">LOW (High Performance / Entry GPU — 512 Shadows)</option>
           </select>
         </div>
 
@@ -272,8 +272,8 @@ export class SettingsModal {
     }
 
     this.graphicsQualitySelect.addEventListener('change', () => {
-      const scale = parseFloat(this.graphicsQualitySelect.value);
-      this.callbacks.onQualityChanged?.(scale);
+      const level = this.graphicsQualitySelect.value as 'AUTO' | 'LOW' | 'MEDIUM' | 'HIGH';
+      this.callbacks.onQualityChanged?.(level);
     });
 
     this.sensitivitySlider.addEventListener('input', () => {
@@ -339,6 +339,12 @@ export class SettingsModal {
   public setAICount(count: number): void {
     if (this.aiCountSelect) {
       this.aiCountSelect.value = count.toString();
+    }
+  }
+
+  public setGraphicsQuality(quality: string): void {
+    if (this.graphicsQualitySelect) {
+      this.graphicsQualitySelect.value = quality;
     }
   }
 

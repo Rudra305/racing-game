@@ -13,6 +13,7 @@ export class PhysicsWorld {
   private collisionDebugMesh: THREE.Mesh | null = null;
 
   // Pre-allocated scratch objects for zero-allocation performance
+  private _allCars: VehiclePhysics[] = [];
 
   constructor(track: Track, vehiclePhysics: VehiclePhysics, onImpact?: ImpactCallback) {
     this.track = track;
@@ -105,15 +106,19 @@ export class PhysicsWorld {
     }
 
     // 3. Inter-Vehicle 2D Horizontal Collision Detection & Resolution
-    const allCars: VehiclePhysics[] = [this.vehiclePhysics, ...this.aiVehicles];
-    const n = allCars.length;
+    this._allCars.length = 0;
+    this._allCars.push(this.vehiclePhysics);
+    for (let k = 0; k < this.aiVehicles.length; k++) {
+      this._allCars.push(this.aiVehicles[k]);
+    }
+    const n = this._allCars.length;
     for (let i = 0; i < n; i++) {
-      const carA = allCars[i];
+      const carA = this._allCars[i];
       const posA = carA.position;
       const radiusA = Math.max(1.15, (carA.config.dimensions?.length ?? 4.4) * 0.30);
 
       for (let j = i + 1; j < n; j++) {
-        const carB = allCars[j];
+        const carB = this._allCars[j];
         const posB = carB.position;
         const radiusB = Math.max(1.15, (carB.config.dimensions?.length ?? 4.4) * 0.30);
         const minDist = radiusA + radiusB;

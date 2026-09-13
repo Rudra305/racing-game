@@ -6,6 +6,7 @@ export interface SpeedControlOutput {
 export class AISpeedController {
   private currentThrottle: number = 0;
   private currentBrake: number = 0;
+  private readonly _speedOutput: SpeedControlOutput = { throttle: 0, brake: 0 };
 
   public reset(): void {
     this.currentThrottle = 0;
@@ -55,9 +56,8 @@ export class AISpeedController {
     this.currentThrottle += (targetThrottle - this.currentThrottle) * blend;
     this.currentBrake += (targetBrake - this.currentBrake) * blend;
 
-    return {
-      throttle: Math.max(0, Math.min(1, this.currentThrottle)),
-      brake: Math.max(0, Math.min(1, this.currentBrake))
-    };
+    this._speedOutput.throttle = Math.max(0, Math.min(1, this.currentThrottle));
+    this._speedOutput.brake = Math.max(0, Math.min(1, this.currentBrake));
+    return this._speedOutput;
   }
 }

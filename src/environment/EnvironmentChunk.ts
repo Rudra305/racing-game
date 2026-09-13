@@ -76,81 +76,76 @@ export class EnvironmentChunk {
     let castShadow = false;
 
     if (assetId.startsWith('saguaro_cactus')) {
-      geo0 = ProceduralAssets.createSaguaroCactusGeometry(0);
-      geo1 = ProceduralAssets.createSaguaroCactusGeometry(1);
-      geo2 = ProceduralAssets.createSaguaroCactusGeometry(2);
+      geo0 = ProceduralAssets.getSaguaroCactusGeometry(0);
+      geo1 = ProceduralAssets.getSaguaroCactusGeometry(1);
+      geo2 = ProceduralAssets.getSaguaroCactusGeometry(2);
       mat = ProceduralAssets.cactusMaterial;
       castShadow = true;
     } else if (assetId.startsWith('desert_scrub')) {
-      geo0 = ProceduralAssets.createDesertScrubGeometry();
+      geo0 = ProceduralAssets.getDesertScrubGeometry();
       geo1 = geo0;
       mat = ProceduralAssets.desertScrubMaterial;
     } else if (assetId.startsWith('desert_sandstone_rock_a')) {
-      geo0 = ProceduralAssets.createSandstoneBoulderGeometry(0);
+      geo0 = ProceduralAssets.getSandstoneBoulderGeometry(0);
       geo1 = geo0;
       mat = ProceduralAssets.sandstoneMaterial;
-      castShadow = true;
     } else if (assetId.startsWith('desert_sandstone_rock_b')) {
-      geo0 = ProceduralAssets.createSandstoneBoulderGeometry(1);
+      geo0 = ProceduralAssets.getSandstoneBoulderGeometry(1);
       geo1 = geo0;
       mat = ProceduralAssets.sandstoneMaterial;
-      castShadow = true;
     } else if (assetId.startsWith('coastal_palm')) {
-      geo0 = ProceduralAssets.createPalmTreeGeometry(0);
-      geo1 = ProceduralAssets.createPalmTreeGeometry(1);
-      geo2 = ProceduralAssets.createPalmTreeGeometry(2);
+      geo0 = ProceduralAssets.getPalmTreeGeometry(0);
+      geo1 = ProceduralAssets.getPalmTreeGeometry(1);
+      geo2 = ProceduralAssets.getPalmTreeGeometry(2);
       mat = ProceduralAssets.palmFrondMaterial;
       castShadow = true;
     } else if (assetId.startsWith('coastal_scrub')) {
-      geo0 = ProceduralAssets.createCoastalScrubGeometry();
+      geo0 = ProceduralAssets.getCoastalScrubGeometry();
       geo1 = geo0;
       mat = ProceduralAssets.coastalScrubMaterial;
     } else if (assetId.startsWith('coastal_rock')) {
-      geo0 = ProceduralAssets.createCoastalRockGeometry(0);
+      geo0 = ProceduralAssets.getCoastalRockGeometry(0);
       geo1 = geo0;
       mat = ProceduralAssets.coastalRockMaterial;
-      castShadow = true;
     } else if (assetId.startsWith('alpine_fir')) {
-      geo0 = ProceduralAssets.createFirGeometry(0);
-      geo1 = ProceduralAssets.createFirGeometry(1);
-      geo2 = ProceduralAssets.createFirGeometry(2);
+      geo0 = ProceduralAssets.getFirGeometry(0);
+      geo1 = ProceduralAssets.getFirGeometry(1);
+      geo2 = ProceduralAssets.getFirGeometry(2);
       mat = ProceduralAssets.foliageFirMaterial;
       castShadow = true;
     } else if (assetId.startsWith('alpine_pine')) {
-      geo0 = ProceduralAssets.createPineGeometry(0);
-      geo1 = ProceduralAssets.createPineGeometry(1);
-      geo2 = ProceduralAssets.createPineGeometry(2);
+      geo0 = ProceduralAssets.getPineGeometry(0);
+      geo1 = ProceduralAssets.getPineGeometry(1);
+      geo2 = ProceduralAssets.getPineGeometry(2);
       mat = ProceduralAssets.foliagePineMaterial;
       castShadow = true;
     } else if (assetId.startsWith('mountain_birch')) {
-      geo0 = ProceduralAssets.createBirchGeometry(0);
-      geo1 = ProceduralAssets.createBirchGeometry(1);
-      geo2 = ProceduralAssets.createBirchGeometry(2);
+      geo0 = ProceduralAssets.getBirchGeometry(0);
+      geo1 = ProceduralAssets.getBirchGeometry(1);
+      geo2 = ProceduralAssets.getBirchGeometry(2);
       mat = ProceduralAssets.foliageBirchMaterial;
       castShadow = true;
     } else if (assetId.startsWith('alpine_bush')) {
-      geo0 = ProceduralAssets.createBushGeometry(0);
-      geo1 = ProceduralAssets.createBushGeometry(1);
+      geo0 = ProceduralAssets.getBushGeometry(0);
+      geo1 = ProceduralAssets.getBushGeometry(1);
       mat = ProceduralAssets.bushMaterial;
     } else if (assetId.startsWith('mountain_fern')) {
-      geo0 = ProceduralAssets.createFernGeometry();
+      geo0 = ProceduralAssets.getFernGeometry();
       geo1 = geo0;
       mat = ProceduralAssets.bushMaterial;
     } else if (assetId.startsWith('alpine_grass')) {
-      geo0 = ProceduralAssets.createGrassGeometry();
+      geo0 = ProceduralAssets.getGrassGeometry();
       geo1 = geo0;
       mat = ProceduralAssets.grassMaterial;
     } else if (assetId.startsWith('granite_boulder_a')) {
-      geo0 = ProceduralAssets.createRockGeometry(0);
+      geo0 = ProceduralAssets.getRockGeometry(0);
       geo1 = geo0;
       mat = ProceduralAssets.rockMaterial;
-      castShadow = true;
     } else {
       // granite_boulder_b
-      geo0 = ProceduralAssets.createRockGeometry(1);
+      geo0 = ProceduralAssets.getRockGeometry(1);
       geo1 = geo0;
       mat = ProceduralAssets.rockMaterial;
-      castShadow = true;
     }
 
     // 1. Build LOD 0 InstancedMesh
@@ -247,8 +242,11 @@ export class EnvironmentChunk {
   public dispose(): void {
     this.state = ChunkState.DISPOSED;
     for (const m of this.instancedMeshes) {
-      if (m.geometry) m.geometry.dispose();
+      m.dispose(); // Disposes instance matrix attribute buffer without destroying shared geometry
     }
+    while (this.lod0Group.children.length > 0) this.lod0Group.remove(this.lod0Group.children[0]);
+    while (this.lod1Group.children.length > 0) this.lod1Group.remove(this.lod1Group.children[0]);
+    while (this.lod2Group.children.length > 0) this.lod2Group.remove(this.lod2Group.children[0]);
     while (this.group.children.length > 0) {
       this.group.remove(this.group.children[0]);
     }

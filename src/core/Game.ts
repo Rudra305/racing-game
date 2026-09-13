@@ -33,6 +33,7 @@ import { WeatherType, WeatherProfile } from '../environment/WeatherTypes';
 import { RainSystem } from '../rendering/RainSystem';
 import { TireSpraySystem } from '../rendering/TireSpraySystem';
 import { TrackSelectionModal } from '../ui/TrackSelectionModal';
+import { QualityManager, QualityProfile } from '../performance/QualityManager';
 
 export class Game {
   // Systems
@@ -62,6 +63,7 @@ export class Game {
   private trackSelectionModal!: TrackSelectionModal;
   private assetManager!: AssetManager;
   private gameLoop!: GameLoop;
+  public qualityManager!: QualityManager;
 
   private boundResize: () => void;
 
@@ -88,6 +90,12 @@ export class Game {
     this.sceneManager = new SceneManager();
     this.cameraManager = new CameraManager(GAME_CONFIG.camera);
     this.audioManager = new AudioManager();
+
+    // 2a. Adaptive Quality System
+    this.qualityManager = new QualityManager();
+    this.qualityManager.onQualityChanged((profile) => {
+      this.applyQualityProfile(profile);
+    });
 
     // 2b. Weather, Rain & Spray Particle Subsystems
     let savedWeather = WeatherType.CLEAR;
@@ -251,8 +259,8 @@ export class Game {
       onOpenTrackModal: () => {
         this.openTrackSelector();
       },
-      onQualityChanged: (scale) => {
-        this.environmentManager.setLODScale(scale);
+      onQualityChanged: (level) => {
+        this.qualityManager.setQualityLevel(level);
       },
       onAIDifficultyChanged: (difficulty) => {
         this.raceManager.config.difficulty = difficulty;
@@ -276,6 +284,10 @@ export class Game {
     this.settingsModal.setAIDifficulty(initialDifficulty);
     this.settingsModal.setAICount(initialAICount);
     this.settingsModal.setWeather(isWeatherCycle ? 'CYCLE' : savedWeather);
+    this.settingsModal.setGraphicsQuality(this.qualityManager.level);
+
+    // Apply initial quality configuration
+    this.applyQualityProfile(this.qualityManager.currentProfile);
 
     // Phase 9 Multi-Track Selection Modal
     const trackOverlay = document.getElementById('track-selection-overlay') as HTMLElement;
@@ -483,6 +495,9 @@ export class Game {
     // 4. Update Environment LOD & Distance Culling
     this.environmentManager.update(this.vehicle.group.position);
 
+    // 4b. Update Adaptive Quality Controller
+    this.qualityManager.update(dt);
+
     // 5. Update HUD Telemetry (Throttled internally for text, per-frame for speed/RPM)
     this.hud.update(dt, this.raceManager, this.vehiclePhysics, this.track.checkpoints.length);
 
@@ -649,8 +664,39 @@ export class Game {
     this.aiSystem.syncVisuals();
 
     // 10. Reset race state & start countdown
+    this.applyQualityProfile(this.qualityManager.currentProfile);
     this.hud.reset();
     this.restartRace();
+  }
+
+  /**
+   * Applies graphics fidelity parameters from QualityManager across rendering subsystems.
+   */
+  private applyQualityProfile(profile: QualityProfile): void {
+    if (this.renderer) {
+      this.renderer.setMaxPixelRatio(profile.maxPixelRatio);
+      this.renderer.setShadowsEnabled(profile.shadowsEnabled);
+    }
+
+    if (this.sceneManager?.lighting) {
+      this.sceneManager.lighting.applyQualityProfile(
+        profile.shadowsEnabled,
+        profile.shadowMapResolution,
+        profile.shadowDistance
+      );
+    }
+
+    if (this.environmentManager) {
+      this.environmentManager.setLODScale(profile.lodScale);
+    }
+
+    if (this.rainSystem && this.weatherManager) {
+      const activeIntensity = this.weatherManager.activeProfile.rainIntensity;
+      this.rainSystem.setIntensity(
+        activeIntensity,
+        Math.round(activeIntensity * profile.rainParticles)
+      );
+    }
   }
 
   /**

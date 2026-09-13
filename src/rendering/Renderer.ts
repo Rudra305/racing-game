@@ -45,6 +45,15 @@ export class Renderer {
     this.instance.setSize(width, height, false);
   }
 
+  public setMaxPixelRatio(ratio: number): void {
+    (this as any).maxPixelRatio = Math.max(1.0, Math.min(2.0, ratio));
+    this.resize();
+  }
+
+  public setShadowsEnabled(enabled: boolean): void {
+    this.instance.shadowMap.enabled = enabled;
+  }
+
   public render(scene: THREE.Scene, camera: THREE.Camera): void {
     this.instance.render(scene, camera);
   }

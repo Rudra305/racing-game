@@ -24,6 +24,20 @@ export class TrackDebugRenderer {
   }
 
   private clearDebugVisuals(): void {
+    this.group.traverse((obj) => {
+      const mesh = obj as THREE.Mesh;
+      if (mesh.geometry) {
+        mesh.geometry.dispose();
+      }
+      if (mesh.material) {
+        if (Array.isArray(mesh.material)) {
+          mesh.material.forEach((m) => m.dispose());
+        } else {
+          mesh.material.dispose();
+        }
+      }
+    });
+
     while (this.group.children.length > 0) {
       this.group.remove(this.group.children[0]);
     }

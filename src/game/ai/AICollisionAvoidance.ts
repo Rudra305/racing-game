@@ -14,6 +14,7 @@ export interface AvoidanceOutput {
 
 export class AICollisionAvoidance {
   private smoothedOffset: number = 0;
+  private readonly _output: AvoidanceOutput = { lateralOffset: 0, speedMultiplier: 1.0 };
 
   public reset(): void {
     this.smoothedOffset = 0;
@@ -27,7 +28,8 @@ export class AICollisionAvoidance {
     trackLength: number,
     otherVehicles: NearbyVehicleInfo[],
     overtakeAggression: number = 0.7,
-    dt: number = 0.06
+    dt: number = 0.06,
+    selfVehicleIndex?: number
   ): AvoidanceOutput {
     let targetOffset = 0;
     let speedMultiplier = 1.0;
@@ -36,7 +38,10 @@ export class AICollisionAvoidance {
     const safeMargin = 1.35;
     const maxAllowedLateral = Math.max(1.0, trackHalfWidth - safeMargin);
 
-    for (const other of otherVehicles) {
+    const count = otherVehicles.length;
+    for (let idx = 0; idx < count; idx++) {
+      if (selfVehicleIndex !== undefined && idx === selfVehicleIndex) continue;
+      const other = otherVehicles[idx];
       // Longitudinal distance ahead along the circuit
       let distAhead = other.distanceAlongTrack - myDistance;
       if (distAhead < -trackLength * 0.5) distAhead += trackLength;
@@ -95,9 +100,8 @@ export class AICollisionAvoidance {
     const blend = 1.0 - Math.exp(-4.2 * dt);
     this.smoothedOffset += (targetOffset - this.smoothedOffset) * blend;
 
-    return {
-      lateralOffset: this.smoothedOffset,
-      speedMultiplier
-    };
+    this._output.lateralOffset = this.smoothedOffset;
+    this._output.speedMultiplier = speedMultiplier;
+    return this._output;
   }
 }

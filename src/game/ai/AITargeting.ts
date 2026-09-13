@@ -16,6 +16,13 @@ export class AITargeting {
   private maxLookAhead: number = 48.0;
 
   private _scratchTarget: THREE.Vector3 = new THREE.Vector3();
+  private readonly _targetResult: AITarget = {
+    position: new THREE.Vector3(),
+    tangent: new THREE.Vector3(),
+    normal: new THREE.Vector3(),
+    lookAheadDistance: 12.0,
+    targetSpeed: 0
+  };
 
   public getTarget(
     racingLine: AIRacingLine,
@@ -48,12 +55,11 @@ export class AITargeting {
       this._scratchTarget.addScaledVector(targetPoint.normal, lateralOffset);
     }
 
-    return {
-      position: this._scratchTarget.clone(),
-      tangent: targetPoint.tangent,
-      normal: targetPoint.normal,
-      lookAheadDistance,
-      targetSpeed: targetPoint.targetSpeed
-    };
+    this._targetResult.position.copy(this._scratchTarget);
+    this._targetResult.tangent = targetPoint.tangent;
+    this._targetResult.normal = targetPoint.normal;
+    this._targetResult.lookAheadDistance = lookAheadDistance;
+    this._targetResult.targetSpeed = targetPoint.targetSpeed;
+    return this._targetResult;
   }
 }

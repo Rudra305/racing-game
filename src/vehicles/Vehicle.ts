@@ -550,15 +550,37 @@ export class Vehicle {
   }
 
   public dispose(): void {
-    while (this.chassisGroup.children.length > 0) {
-      const child = this.chassisGroup.children[0] as THREE.Mesh;
-      this.chassisGroup.remove(child);
-      if (child.geometry) child.geometry.dispose();
-    }
+    // 1. Dispose wheels (rims and tires)
     for (const pivot of this.wheelSteerPivots) {
+      pivot.traverse((child) => {
+        const mesh = child as THREE.Mesh;
+        if (mesh.isMesh && mesh.geometry) {
+          mesh.geometry.dispose();
+        }
+      });
       this.group.remove(pivot);
     }
     this.wheelSteerPivots = [];
     this.wheelMeshes = [];
+
+    // 2. Dispose chassis geometry
+    this.chassisGroup.traverse((child) => {
+      const mesh = child as THREE.Mesh;
+      if (mesh.isMesh && mesh.geometry) {
+        mesh.geometry.dispose();
+      }
+    });
+    while (this.chassisGroup.children.length > 0) {
+      this.chassisGroup.remove(this.chassisGroup.children[0]);
+    }
+
+    if (this.externalModel) {
+      this.group.remove(this.externalModel);
+      this.externalModel = null;
+    }
+
+    while (this.group.children.length > 0) {
+      this.group.remove(this.group.children[0]);
+    }
   }
 }

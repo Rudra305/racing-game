@@ -94,6 +94,34 @@ export class EnvironmentLighting {
     this.sunLight.shadow.mapSize.height = clampedRes;
   }
 
+  public applyQualityProfile(shadowsEnabled: boolean, resolution: number, distance: number): void {
+    this.sunLight.castShadow = shadowsEnabled;
+    if (!shadowsEnabled) {
+      if (this.sunLight.shadow.map) {
+        this.sunLight.shadow.map.dispose();
+        this.sunLight.shadow.map = null as any;
+      }
+      return;
+    }
+
+    const clampedRes = Math.max(512, Math.min(2048, resolution));
+    if (this.sunLight.shadow.mapSize.width !== clampedRes) {
+      if (this.sunLight.shadow.map) {
+        this.sunLight.shadow.map.dispose();
+        this.sunLight.shadow.map = null as any;
+      }
+      this.sunLight.shadow.mapSize.width = clampedRes;
+      this.sunLight.shadow.mapSize.height = clampedRes;
+    }
+
+    const d = distance;
+    this.sunLight.shadow.camera.left = -d;
+    this.sunLight.shadow.camera.right = d;
+    this.sunLight.shadow.camera.top = d;
+    this.sunLight.shadow.camera.bottom = -d;
+    this.sunLight.shadow.camera.updateProjectionMatrix();
+  }
+
   public get sunDirection(): THREE.Vector3 {
     return this.sunOffset.clone().normalize();
   }

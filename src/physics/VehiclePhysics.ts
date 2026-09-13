@@ -81,6 +81,30 @@ export class VehiclePhysics {
   // Pre-allocated scratch objects for zero-allocation performance
   private readonly _forward: THREE.Vector3 = new THREE.Vector3();
   private readonly _right: THREE.Vector3 = new THREE.Vector3();
+  private readonly _telemetry: VehicleTelemetry = {
+    speedKmH: 0,
+    rpm: 800,
+    gear: 'N',
+    rpmRatio: 0,
+    throttle: 0,
+    brake: 0,
+    steering: 0,
+    slipAngle: 0,
+    lateralVelocity: 0,
+    longitudinalVelocity: 0,
+    acceleration: 0,
+    surface: SurfaceType.ASPHALT,
+    lateralG: 0,
+    isDrifting: false,
+    driftAngle: 0,
+    isAirborne: false,
+    curbVibration: 0,
+    elevation: 0,
+    gradient: 0,
+    banking: 0,
+    trackDistance: 0,
+    handbrake: false
+  };
 
   constructor(config: VehicleConfig = DEFAULT_VEHICLE_CONFIG) {
     this.config = config;
@@ -355,30 +379,29 @@ export class VehiclePhysics {
   }
 
   public get telemetry(): VehicleTelemetry {
-    return {
-      speedKmH: this.speedKmH,
-      rpm: Math.round(this.drivetrain.currentRPM),
-      gear: this.drivetrain.gearDisplay,
-      rpmRatio: this.drivetrain.rpmRatio,
-      throttle: this.throttleInput,
-      brake: this.brakeInput,
-      steering: this.steerInput,
-      slipAngle: this.tireSystem.driftAngle,
-      lateralVelocity: this.lateralSpeed,
-      longitudinalVelocity: this.forwardSpeed,
-      acceleration: this.acceleration,
-      surface: this.surfaceSystem.currentSurface,
-      lateralG: this.lateralG,
-      isDrifting: this.tireSystem.isDrifting,
-      driftAngle: this.tireSystem.driftAngle,
-      isAirborne: this.isAirborne,
-      curbVibration: this.suspensionSystem.curbVibration,
-      elevation: this.groundElevation,
-      gradient: Math.tan(this.roadPitchAngle) * 100,
-      banking: THREE.MathUtils.radToDeg(this.roadBankAngle),
-      trackDistance: this.trackDistance,
-      handbrake: this.handbrakeInput
-    };
+    this._telemetry.speedKmH = this.speedKmH;
+    this._telemetry.rpm = Math.round(this.drivetrain.currentRPM);
+    this._telemetry.gear = this.drivetrain.gearDisplay;
+    this._telemetry.rpmRatio = this.drivetrain.rpmRatio;
+    this._telemetry.throttle = this.throttleInput;
+    this._telemetry.brake = this.brakeInput;
+    this._telemetry.steering = this.steerInput;
+    this._telemetry.slipAngle = this.tireSystem.driftAngle;
+    this._telemetry.lateralVelocity = this.lateralSpeed;
+    this._telemetry.longitudinalVelocity = this.forwardSpeed;
+    this._telemetry.acceleration = this.acceleration;
+    this._telemetry.surface = this.surfaceSystem.currentSurface;
+    this._telemetry.lateralG = this.lateralG;
+    this._telemetry.isDrifting = this.tireSystem.isDrifting;
+    this._telemetry.driftAngle = this.tireSystem.driftAngle;
+    this._telemetry.isAirborne = this.isAirborne;
+    this._telemetry.curbVibration = this.suspensionSystem.curbVibration;
+    this._telemetry.elevation = this.groundElevation;
+    this._telemetry.gradient = Math.tan(this.roadPitchAngle) * 100;
+    this._telemetry.banking = THREE.MathUtils.radToDeg(this.roadBankAngle);
+    this._telemetry.trackDistance = this.trackDistance;
+    this._telemetry.handbrake = this.handbrakeInput;
+    return this._telemetry;
   }
 
   /**
