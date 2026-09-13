@@ -32,6 +32,7 @@ import { WeatherManager } from '../environment/WeatherManager';
 import { WeatherType, WeatherProfile } from '../environment/WeatherTypes';
 import { RainSystem } from '../rendering/RainSystem';
 import { TireSpraySystem } from '../rendering/TireSpraySystem';
+import { TrackSelectionModal } from '../ui/TrackSelectionModal';
 
 export class Game {
   // Systems
@@ -58,6 +59,7 @@ export class Game {
   private perfMonitor!: PerformanceMonitor;
   private settingsModal!: SettingsModal;
   private garageManager!: GarageManager;
+  private trackSelectionModal!: TrackSelectionModal;
   private assetManager!: AssetManager;
   private gameLoop!: GameLoop;
 
@@ -144,6 +146,9 @@ export class Game {
         this.audioManager.stopWorkshopMusic();
         this.applyPlayerVehicle(def, cust);
         this.restartRace();
+      },
+      onSelectTrack: () => {
+        this.openTrackSelector();
       },
       onClose: () => {
         this.audioManager.stopWorkshopMusic();
@@ -243,6 +248,9 @@ export class Game {
       onTrackChanged: (trackId) => {
         this.switchTrack(trackId);
       },
+      onOpenTrackModal: () => {
+        this.openTrackSelector();
+      },
       onQualityChanged: (scale) => {
         this.environmentManager.setLODScale(scale);
       },
@@ -268,6 +276,19 @@ export class Game {
     this.settingsModal.setAIDifficulty(initialDifficulty);
     this.settingsModal.setAICount(initialAICount);
     this.settingsModal.setWeather(isWeatherCycle ? 'CYCLE' : savedWeather);
+
+    // Phase 9 Multi-Track Selection Modal
+    const trackOverlay = document.getElementById('track-selection-overlay') as HTMLElement;
+    this.trackSelectionModal = new TrackSelectionModal(trackOverlay, {
+      onSelectTrack: (trackId) => {
+        this.switchTrack(trackId);
+        this.settingsModal.setTrack(trackId);
+        canvas.focus();
+      },
+      onClose: () => {
+        canvas.focus();
+      }
+    });
 
     this.hud.onGarageButtonClick(() => {
       this.openGarage();
@@ -317,15 +338,21 @@ export class Game {
     // 0. Poll active input states
     this.inputManager.update();
 
-    // 1. Process Garage & Settings Modal Toggles
+    // 1. Process Garage, Track Selector & Settings Modal Toggles
     if (this.inputManager.consumeToggleGarage()) {
       this.toggleGarage();
+    }
+
+    if (this.inputManager.consumeToggleTrackSelect()) {
+      this.toggleTrackSelector();
     }
 
     if (this.inputManager.consumeToggleSettings()) {
       if (this.garageManager.isOpen) {
         this.audioManager.stopWorkshopMusic();
         this.garageManager.close();
+      } else if (this.trackSelectionModal.visible) {
+        this.closeTrackSelector();
       } else {
         this.settingsModal.toggle();
       }
@@ -348,8 +375,8 @@ export class Game {
     }
 
     // 4. Update Controller & AI based on Race / UI State
-    if (this.garageManager.isOpen || this.settingsModal.visible) {
-      // Pause inputs while in garage or settings menu
+    if (this.garageManager.isOpen || this.settingsModal.visible || this.trackSelectionModal.visible) {
+      // Pause inputs while in garage, settings menu, or circuit directory
       this.vehicleController.setEnabled(false);
       this.aiSystem.setEnabled(false);
       return;
@@ -438,6 +465,7 @@ export class Game {
     // 2c. Update Reactive Web Audio Engine (including procedural rain, tire spray & thunder)
     const isRaceActive = !this.garageManager.isOpen &&
                          !this.settingsModal.visible &&
+                         !this.trackSelectionModal.visible &&
                          (this.raceManager.state === RaceState.RACING || this.raceManager.state === RaceState.COUNTDOWN);
     this.audioManager.update(
       this.vehiclePhysics.telemetry,
@@ -680,6 +708,7 @@ export class Game {
     this.assetManager.dispose();
     this.aiSystem.dispose();
     this.garageManager.dispose();
+    this.trackSelectionModal.close();
     this.audioManager.dispose();
   }
 
@@ -697,6 +726,29 @@ export class Game {
       this.garageManager.close();
     } else {
       this.openGarage();
+    }
+  }
+
+  public openTrackSelector(): void {
+    if (this.garageManager.isOpen) {
+      this.audioManager.stopWorkshopMusic();
+      this.garageManager.close();
+    }
+    if (this.settingsModal.visible) {
+      this.settingsModal.hide();
+    }
+    this.trackSelectionModal.open(this.track.definition.id);
+  }
+
+  public closeTrackSelector(): void {
+    this.trackSelectionModal.close();
+  }
+
+  public toggleTrackSelector(): void {
+    if (this.trackSelectionModal.visible) {
+      this.closeTrackSelector();
+    } else {
+      this.openTrackSelector();
     }
   }
 

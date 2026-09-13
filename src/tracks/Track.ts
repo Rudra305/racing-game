@@ -83,7 +83,7 @@ export class Track {
     this.group.add(this.meshes.finishLineMesh);
 
     // 6. Procedural Terrain with Road Corridor
-    this.terrain = new Terrain(definition.terrain, this.sampler);
+    this.terrain = new Terrain(definition.terrain, this.sampler, definition.environmentPreset);
     this.group.add(this.terrain.mesh);
   }
 

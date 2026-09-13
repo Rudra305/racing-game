@@ -75,7 +75,42 @@ export class EnvironmentChunk {
     let mat: THREE.Material = ProceduralAssets.foliageFirMaterial;
     let castShadow = false;
 
-    if (assetId.startsWith('alpine_fir')) {
+    if (assetId.startsWith('saguaro_cactus')) {
+      geo0 = ProceduralAssets.createSaguaroCactusGeometry(0);
+      geo1 = ProceduralAssets.createSaguaroCactusGeometry(1);
+      geo2 = ProceduralAssets.createSaguaroCactusGeometry(2);
+      mat = ProceduralAssets.cactusMaterial;
+      castShadow = true;
+    } else if (assetId.startsWith('desert_scrub')) {
+      geo0 = ProceduralAssets.createDesertScrubGeometry();
+      geo1 = geo0;
+      mat = ProceduralAssets.desertScrubMaterial;
+    } else if (assetId.startsWith('desert_sandstone_rock_a')) {
+      geo0 = ProceduralAssets.createSandstoneBoulderGeometry(0);
+      geo1 = geo0;
+      mat = ProceduralAssets.sandstoneMaterial;
+      castShadow = true;
+    } else if (assetId.startsWith('desert_sandstone_rock_b')) {
+      geo0 = ProceduralAssets.createSandstoneBoulderGeometry(1);
+      geo1 = geo0;
+      mat = ProceduralAssets.sandstoneMaterial;
+      castShadow = true;
+    } else if (assetId.startsWith('coastal_palm')) {
+      geo0 = ProceduralAssets.createPalmTreeGeometry(0);
+      geo1 = ProceduralAssets.createPalmTreeGeometry(1);
+      geo2 = ProceduralAssets.createPalmTreeGeometry(2);
+      mat = ProceduralAssets.palmFrondMaterial;
+      castShadow = true;
+    } else if (assetId.startsWith('coastal_scrub')) {
+      geo0 = ProceduralAssets.createCoastalScrubGeometry();
+      geo1 = geo0;
+      mat = ProceduralAssets.coastalScrubMaterial;
+    } else if (assetId.startsWith('coastal_rock')) {
+      geo0 = ProceduralAssets.createCoastalRockGeometry(0);
+      geo1 = geo0;
+      mat = ProceduralAssets.coastalRockMaterial;
+      castShadow = true;
+    } else if (assetId.startsWith('alpine_fir')) {
       geo0 = ProceduralAssets.createFirGeometry(0);
       geo1 = ProceduralAssets.createFirGeometry(1);
       geo2 = ProceduralAssets.createFirGeometry(2);

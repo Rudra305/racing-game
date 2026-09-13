@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { TrackSampler } from '../tracks/TrackSampler';
 import { Terrain } from '../terrain/Terrain';
 import { ProceduralAssets } from './ProceduralAssets';
-import { BiomeDefinition } from './EnvironmentTypes';
+import { BiomeDefinition, BiomeType } from './EnvironmentTypes';
 
 export class PropSystem {
   public readonly group: THREE.Group = new THREE.Group();
@@ -169,35 +169,78 @@ export class PropSystem {
   }
 
   /**
-   * 4. Alpine Visual Landmarks (Lookout Tower, Summit Mast, Cliff Formations)
+   * 4. Biome-Specific Visual Landmarks
    */
-  private generateLandmarks(sampler: TrackSampler, terrain: Terrain, _biome: BiomeDefinition): void {
-    // Landmark 1: Observation Lookout Tower at ~260m
-    const s1 = sampler.getSampleAtDistance(260);
-    const pos1 = s1.position.clone().addScaledVector(s1.bankedRight, -26.0);
-    pos1.y = terrain.getHeightAt(pos1.x, pos1.z);
+  private generateLandmarks(sampler: TrackSampler, terrain: Terrain, biome: BiomeDefinition): void {
+    if (biome.id === BiomeType.DESERT_CANYON) {
+      // Landmark 1: Sandstone Arch at ~420m (spanning canyon pass)
+      const s1 = sampler.getSampleAtDistance(420);
+      const pos1 = s1.position.clone();
+      pos1.y = terrain.getHeightAt(pos1.x, pos1.z);
 
-    const towerGeo = ProceduralAssets.createLookoutTowerGeometry();
-    const towerMesh = new THREE.Mesh(towerGeo, ProceduralAssets.woodMaterial);
-    towerMesh.position.copy(pos1);
-    towerMesh.rotation.y = Math.atan2(s1.tangent.x, s1.tangent.z) + 0.4;
-    towerMesh.castShadow = true;
-    towerMesh.receiveShadow = true;
-    this.group.add(towerMesh);
-    this.meshes.push(towerMesh);
+      const archGeo = ProceduralAssets.createSandstoneArchGeometry();
+      const archMesh = new THREE.Mesh(archGeo, ProceduralAssets.sandstoneMaterial);
+      archMesh.position.copy(pos1);
+      archMesh.rotation.y = Math.atan2(s1.tangent.x, s1.tangent.z);
+      archMesh.castShadow = true;
+      archMesh.receiveShadow = true;
+      this.group.add(archMesh);
+      this.meshes.push(archMesh);
 
-    // Landmark 2: Summit Weather Radar Mast at ~640m
-    const s2 = sampler.getSampleAtDistance(640);
-    const pos2 = s2.position.clone().addScaledVector(s2.bankedRight, 22.0);
-    pos2.y = terrain.getHeightAt(pos2.x, pos2.z);
+      // Landmark 2: Canyon Radio Relay Mast at ~980m
+      const s2 = sampler.getSampleAtDistance(980);
+      const pos2 = s2.position.clone().addScaledVector(s2.bankedRight, 28.0);
+      pos2.y = terrain.getHeightAt(pos2.x, pos2.z);
 
-    const mastGeo = ProceduralAssets.createSummitMastGeometry();
-    const mastMesh = new THREE.Mesh(mastGeo, ProceduralAssets.steelMaterial);
-    mastMesh.position.copy(pos2);
-    mastMesh.castShadow = true;
-    mastMesh.receiveShadow = true;
-    this.group.add(mastMesh);
-    this.meshes.push(mastMesh);
+      const mastGeo = ProceduralAssets.createSummitMastGeometry();
+      const mastMesh = new THREE.Mesh(mastGeo, ProceduralAssets.steelMaterial);
+      mastMesh.position.copy(pos2);
+      mastMesh.castShadow = true;
+      mastMesh.receiveShadow = true;
+      this.group.add(mastMesh);
+      this.meshes.push(mastMesh);
+    } else if (biome.id === BiomeType.COASTAL) {
+      // Landmark: Coastal Lighthouse on seaside bluff at ~380m
+      const s1 = sampler.getSampleAtDistance(380);
+      const pos1 = s1.position.clone().addScaledVector(s1.bankedRight, 34.0);
+      pos1.y = terrain.getHeightAt(pos1.x, pos1.z);
+
+      const lightGeo = ProceduralAssets.createLighthouseGeometry();
+      const lightMesh = new THREE.Mesh(lightGeo, ProceduralAssets.lighthouseMaterial);
+      lightMesh.position.copy(pos1);
+      lightMesh.castShadow = true;
+      lightMesh.receiveShadow = true;
+      this.group.add(lightMesh);
+      this.meshes.push(lightMesh);
+    } else {
+      // Alpine Forest
+      // Landmark 1: Observation Lookout Tower at ~260m
+      const s1 = sampler.getSampleAtDistance(260);
+      const pos1 = s1.position.clone().addScaledVector(s1.bankedRight, -26.0);
+      pos1.y = terrain.getHeightAt(pos1.x, pos1.z);
+
+      const towerGeo = ProceduralAssets.createLookoutTowerGeometry();
+      const towerMesh = new THREE.Mesh(towerGeo, ProceduralAssets.woodMaterial);
+      towerMesh.position.copy(pos1);
+      towerMesh.rotation.y = Math.atan2(s1.tangent.x, s1.tangent.z) + 0.4;
+      towerMesh.castShadow = true;
+      towerMesh.receiveShadow = true;
+      this.group.add(towerMesh);
+      this.meshes.push(towerMesh);
+
+      // Landmark 2: Summit Weather Radar Mast at ~640m
+      const s2 = sampler.getSampleAtDistance(640);
+      const pos2 = s2.position.clone().addScaledVector(s2.bankedRight, 22.0);
+      pos2.y = terrain.getHeightAt(pos2.x, pos2.z);
+
+      const mastGeo = ProceduralAssets.createSummitMastGeometry();
+      const mastMesh = new THREE.Mesh(mastGeo, ProceduralAssets.steelMaterial);
+      mastMesh.position.copy(pos2);
+      mastMesh.castShadow = true;
+      mastMesh.receiveShadow = true;
+      this.group.add(mastMesh);
+      this.meshes.push(mastMesh);
+    }
   }
 
   /**

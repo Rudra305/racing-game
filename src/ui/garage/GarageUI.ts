@@ -11,6 +11,7 @@ export interface GarageUIEvents {
   onCustomizationChange: (customization: VehicleCustomization) => void;
   onCustomizationReset: () => void;
   onAutoRotateToggle: () => void;
+  onSelectTrack?: () => void;
   onStartRace: () => void;
   onClose: () => void;
 }
@@ -123,13 +124,30 @@ export class GarageUI {
           <div class="footer-keyhints">
             <span class="hint-item"><kbd>←</kbd> <kbd>→</kbd> Category</span>
             <span class="hint-item"><kbd>↑</kbd> <kbd>↓</kbd> Vehicle</span>
+            <span class="hint-item"><kbd>T</kbd> Circuit</span>
             <span class="hint-item"><kbd>Enter</kbd> Race</span>
             <span class="hint-item"><kbd>Esc</kbd> Exit</span>
           </div>
 
-          <button id="btn-start-race" class="btn-primary-race">
-            🏎️ START RACE [ENTER] ➔
-          </button>
+          <div style="display: flex; gap: 12px; align-items: center;">
+            <button id="btn-select-track-garage" style="
+              background: rgba(88, 166, 255, 0.14);
+              border: 1px solid rgba(88, 166, 255, 0.4);
+              color: #58a6ff;
+              font-weight: 700;
+              padding: 10px 18px;
+              border-radius: 6px;
+              cursor: pointer;
+              font-size: 13px;
+              font-family: monospace;
+              transition: all 0.2s ease;
+            ">
+              🏁 SELECT CIRCUIT [T]
+            </button>
+            <button id="btn-start-race" class="btn-primary-race">
+              🏎️ START RACE [ENTER] ➔
+            </button>
+          </div>
         </footer>
       </div>
     `;
@@ -153,6 +171,16 @@ export class GarageUI {
     const closeBtn = this.overlay.querySelector<HTMLButtonElement>('#btn-close-garage');
     if (closeBtn) {
       closeBtn.addEventListener('click', () => this.events.onClose());
+    }
+
+    // Select track button
+    const trackBtn = this.overlay.querySelector<HTMLButtonElement>('#btn-select-track-garage');
+    if (trackBtn) {
+      trackBtn.addEventListener('click', () => {
+        if (this.events.onSelectTrack) {
+          this.events.onSelectTrack();
+        }
+      });
     }
 
     // Start race button

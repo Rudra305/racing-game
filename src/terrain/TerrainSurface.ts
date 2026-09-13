@@ -3,7 +3,8 @@ export enum SurfaceType {
   KERB = 'KERB',
   GRASS = 'GRASS',
   DIRT = 'DIRT',
-  GRAVEL = 'GRAVEL'
+  GRAVEL = 'GRAVEL',
+  SAND = 'SAND'
 }
 
 export interface SurfaceProperties {
@@ -61,5 +62,14 @@ export const SURFACE_PROPERTIES: Record<SurfaceType, SurfaceProperties> = {
     brakingModifier: 0.58,
     vibration: 0.55,
     colorHex: 0x6e6559
+  },
+  [SurfaceType.SAND]: {
+    type: SurfaceType.SAND,
+    grip: 0.50,
+    rollingResistance: 3.6,
+    accelerationModifier: 0.72,
+    brakingModifier: 0.68,
+    vibration: 0.30,
+    colorHex: 0xd4a373
   }
 };

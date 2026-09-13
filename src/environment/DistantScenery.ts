@@ -1,14 +1,24 @@
 import * as THREE from 'three';
+import { BiomeType } from './EnvironmentTypes';
 
 export class DistantScenery {
+  public readonly group: THREE.Group = new THREE.Group();
   public readonly mesh: THREE.Mesh;
+  private oceanMesh: THREE.Mesh | null = null;
   private material: THREE.MeshStandardMaterial;
 
-  constructor(radius: number = 850, peakCount: number = 20) {
-    const geometry = this.buildMountainHorizonGeometry(radius, peakCount);
+  constructor(radius: number = 850, peakCount: number = 24, biomeType: BiomeType = BiomeType.ALPINE_FOREST) {
+    const geometry = this.buildHorizonGeometry(radius, peakCount, biomeType);
+
+    let matColor = 0x3d4a58;
+    if (biomeType === BiomeType.DESERT_CANYON) {
+      matColor = 0x944a2b; // Warm terracotta dust haze
+    } else if (biomeType === BiomeType.COASTAL) {
+      matColor = 0x3a5666; // Oceanic haze
+    }
 
     this.material = new THREE.MeshStandardMaterial({
-      color: 0x3d4a58, // Mountain blue-grey atmospheric haze
+      color: matColor,
       roughness: 0.95,
       metalness: 0.05,
       flatShading: true
@@ -16,41 +26,84 @@ export class DistantScenery {
 
     this.mesh = new THREE.Mesh(geometry, this.material);
     this.mesh.position.y = -10;
+    this.group.add(this.mesh);
+
+    // Ocean plane for coastal biomes
+    if (biomeType === BiomeType.COASTAL) {
+      const oceanGeo = new THREE.RingGeometry(180, radius * 1.5, 48);
+      const oceanMat = new THREE.MeshStandardMaterial({
+        color: 0x16384c,
+        roughness: 0.25,
+        metalness: 0.35
+      });
+      this.oceanMesh = new THREE.Mesh(oceanGeo, oceanMat);
+      this.oceanMesh.rotation.x = -Math.PI / 2;
+      this.oceanMesh.position.y = -6.0;
+      this.group.add(this.oceanMesh);
+    }
   }
 
-  private buildMountainHorizonGeometry(radius: number, peakCount: number): THREE.BufferGeometry {
+  private buildHorizonGeometry(radius: number, peakCount: number, biomeType: BiomeType): THREE.BufferGeometry {
     const vertices: number[] = [];
     const colors: number[] = [];
     const indices: number[] = [];
 
-    // Pre-allocated colors for mountain depth
-    const colPeak = new THREE.Color(0xdde5ee); // Snow-capped ridge
-    const colMid = new THREE.Color(0x424e5b);  // Granite face
-    const colBase = new THREE.Color(0x232e3a); // Valley shadow
+    // Pre-allocated colors tailored to biome
+    let colPeak: THREE.Color;
+    let colMid: THREE.Color;
+    let colBase: THREE.Color;
+
+    if (biomeType === BiomeType.DESERT_CANYON) {
+      colPeak = new THREE.Color(0xd9955b); // Sunbaked mesa top
+      colMid = new THREE.Color(0x943d22);  // Red sandstone canyon rim wall
+      colBase = new THREE.Color(0x542314); // Canyon wash shadow
+    } else if (biomeType === BiomeType.COASTAL) {
+      colPeak = new THREE.Color(0x6e7884); // Weathered headland crest
+      colMid = new THREE.Color(0x3e5246);  // Maritime scrub
+      colBase = new THREE.Color(0x1a2e38); // Sea-level cliff base
+    } else {
+      // Alpine
+      colPeak = new THREE.Color(0xdde5ee); // Snow-capped ridge
+      colMid = new THREE.Color(0x424e5b);  // Granite face
+      colBase = new THREE.Color(0x232e3a); // Valley shadow
+    }
 
     const ringStep = (Math.PI * 2) / peakCount;
 
-    // Generate inner and outer mountain wall rings
     for (let i = 0; i < peakCount; i++) {
       const angle0 = i * ringStep;
       const angle1 = (i + 1) * ringStep;
 
-      // Pseudo-random deterministic peak heights and distances
-      const h0 = 90 + Math.sin(i * 3.7) * 45 + Math.cos(i * 7.1) * 35;
-      const hMid = 140 + Math.sin(i * 4.9 + 1.2) * 65 + Math.cos(i * 2.3) * 40;
-      const h1 = 90 + Math.sin((i + 1) * 3.7) * 45 + Math.cos((i + 1) * 7.1) * 35;
+      let h0: number;
+      let hMid: number;
+      let h1: number;
+
+      if (biomeType === BiomeType.DESERT_CANYON) {
+        // Flat-topped mesas and tablelands
+        const plateauBase = 75 + Math.sin(i * 2.8) * 30;
+        h0 = plateauBase;
+        hMid = plateauBase + 8; // Flat mesa crest
+        h1 = plateauBase;
+      } else if (biomeType === BiomeType.COASTAL) {
+        // Broad rolling coastal headlands
+        h0 = 55 + Math.sin(i * 2.5) * 28;
+        hMid = 85 + Math.sin(i * 3.2 + 0.5) * 35;
+        h1 = 55 + Math.sin((i + 1) * 2.5) * 28;
+      } else {
+        // Alpine sharp peaks
+        h0 = 90 + Math.sin(i * 3.7) * 45 + Math.cos(i * 7.1) * 35;
+        hMid = 140 + Math.sin(i * 4.9 + 1.2) * 65 + Math.cos(i * 2.3) * 40;
+        h1 = 90 + Math.sin((i + 1) * 3.7) * 45 + Math.cos((i + 1) * 7.1) * 35;
+      }
 
       const r0 = radius + Math.sin(i * 2.5) * 60;
       const rMid = radius + 80 + Math.cos(i * 3.1) * 70;
       const r1 = radius + Math.sin((i + 1) * 2.5) * 60;
 
-      // Base left
       const x0 = Math.sin(angle0) * r0;
       const z0 = Math.cos(angle0) * r0;
-      // Summit center
       const xMid = Math.sin((angle0 + angle1) * 0.5) * rMid;
       const zMid = Math.cos((angle0 + angle1) * 0.5) * rMid;
-      // Base right
       const x1 = Math.sin(angle1) * r1;
       const z1 = Math.cos(angle1) * r1;
 
@@ -60,7 +113,7 @@ export class DistantScenery {
       vertices.push(x0, -15, z0);
       colors.push(colBase.r, colBase.g, colBase.b);
 
-      // Vertex 1: Peak summit
+      // Vertex 1: Peak / Mesa summit
       vertices.push(xMid, hMid, zMid);
       colors.push(colPeak.r, colPeak.g, colPeak.b);
 
@@ -76,7 +129,7 @@ export class DistantScenery {
       vertices.push(x1 * 0.95, h1 * 0.6, z1 * 0.95);
       colors.push(colMid.r, colMid.g, colMid.b);
 
-      // Faceted mountain triangles
+      // Faceted mountain/mesa triangles
       indices.push(baseIdx, baseIdx + 3, baseIdx + 1);
       indices.push(baseIdx, baseIdx + 1, baseIdx + 2);
       indices.push(baseIdx + 1, baseIdx + 4, baseIdx + 2);
@@ -92,12 +145,18 @@ export class DistantScenery {
   }
 
   public updatePosition(targetPosition: THREE.Vector3): void {
-    this.mesh.position.x = targetPosition.x;
-    this.mesh.position.z = targetPosition.z;
+    this.group.position.x = targetPosition.x;
+    this.group.position.z = targetPosition.z;
+    this.mesh.position.x = 0;
+    this.mesh.position.z = 0;
   }
 
   public dispose(): void {
     this.mesh.geometry.dispose();
     this.material.dispose();
+    if (this.oceanMesh) {
+      this.oceanMesh.geometry.dispose();
+      (this.oceanMesh.material as THREE.Material).dispose();
+    }
   }
 }

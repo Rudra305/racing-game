@@ -137,16 +137,172 @@ export const ALPINE_FOREST_BIOME: BiomeDefinition = {
   ]
 };
 
+export const DESERT_CANYON_BIOME: BiomeDefinition = {
+  id: BiomeType.DESERT_CANYON,
+  name: 'Canyon Diablo Arid Badlands',
+  fogColor: 0xd6a978,
+  fogNear: 120,
+  fogFar: 680,
+  sunColor: 0xfff0d4,
+  sunIntensity: 2.6,
+  skyZenithColor: 0x142b4d,
+  skyHorizonColor: 0xdfb489,
+  vegetationRules: [
+    // 1. Saguaro Cactus (LOD 0, 1, 2)
+    {
+      assetId: 'saguaro_cactus_lod0',
+      lodVariantIds: ['saguaro_cactus_lod0', 'saguaro_cactus_lod1', 'saguaro_cactus_lod2'],
+      minDistFromRoad: 15,
+      maxDistFromRoad: 140,
+      minElevation: -10,
+      maxElevation: 50,
+      maxSlope: 0.8,
+      density: 5.0,
+      scaleRange: [0.8, 1.45],
+      castShadow: true
+    },
+    // 2. Arid Desert Scrub / Tumbleweed
+    {
+      assetId: 'desert_scrub',
+      minDistFromRoad: 8.5,
+      maxDistFromRoad: 48,
+      density: 7.5,
+      scaleRange: [0.75, 1.3],
+      castShadow: false
+    },
+    // 3. Sandstone Canyon Boulders (Variant A)
+    {
+      assetId: 'desert_sandstone_rock_a',
+      minDistFromRoad: 9.5,
+      maxDistFromRoad: 70,
+      density: 3.5,
+      scaleRange: [0.9, 2.6],
+      castShadow: true
+    },
+    // 4. Sandstone Canyon Boulders (Variant B)
+    {
+      assetId: 'desert_sandstone_rock_b',
+      minDistFromRoad: 14,
+      maxDistFromRoad: 95,
+      density: 2.8,
+      scaleRange: [1.2, 3.2],
+      castShadow: true
+    }
+  ],
+  propRules: [
+    {
+      type: 'guardrail',
+      assetId: 'guardrail_segment',
+      intervalMeters: 3.0,
+      lateralOffset: 8.5,
+      curvatureThreshold: 0.006
+    },
+    {
+      type: 'chevron',
+      assetId: 'sign_chevron_right',
+      curvatureThreshold: 0.012
+    },
+    {
+      type: 'speed_sign',
+      assetId: 'sign_speed_80',
+      intervalMeters: 400
+    },
+    {
+      type: 'reflector',
+      assetId: 'reflector_bollard',
+      intervalMeters: 28,
+      lateralOffset: 8.2
+    },
+    {
+      type: 'landmark',
+      assetId: 'landmark_sandstone_arch',
+      specificDistances: [420]
+    },
+    {
+      type: 'landmark',
+      assetId: 'landmark_canyon_beacon',
+      specificDistances: [980]
+    }
+  ]
+};
+
+export const COASTAL_BIOME: BiomeDefinition = {
+  id: BiomeType.COASTAL,
+  name: 'Pacific Coastal Highway',
+  fogColor: 0x9bc2d9,
+  fogNear: 100,
+  fogFar: 620,
+  sunColor: 0xfffaed,
+  sunIntensity: 2.3,
+  skyZenithColor: 0x0c2548,
+  skyHorizonColor: 0x9bc2d9,
+  vegetationRules: [
+    // 1. Coastal Palm Trees (LOD 0, 1, 2)
+    {
+      assetId: 'coastal_palm_lod0',
+      lodVariantIds: ['coastal_palm_lod0', 'coastal_palm_lod1', 'coastal_palm_lod2'],
+      minDistFromRoad: 16,
+      maxDistFromRoad: 120,
+      minElevation: -5,
+      maxElevation: 35,
+      maxSlope: 0.7,
+      density: 4.5,
+      scaleRange: [0.85, 1.4],
+      castShadow: true
+    },
+    // 2. Coastal Dune Grass / Scrub
+    {
+      assetId: 'coastal_scrub',
+      minDistFromRoad: 8.5,
+      maxDistFromRoad: 38,
+      density: 8.0,
+      scaleRange: [0.8, 1.4],
+      castShadow: false
+    },
+    // 3. Marine Bluff Sea Stack Rocks
+    {
+      assetId: 'coastal_rock',
+      minDistFromRoad: 9.0,
+      maxDistFromRoad: 75,
+      density: 3.2,
+      scaleRange: [0.9, 2.4],
+      castShadow: true
+    }
+  ],
+  propRules: [
+    {
+      type: 'guardrail',
+      assetId: 'guardrail_segment',
+      intervalMeters: 3.0,
+      lateralOffset: 9.0,
+      curvatureThreshold: 0.005
+    },
+    {
+      type: 'chevron',
+      assetId: 'sign_chevron_right',
+      curvatureThreshold: 0.010
+    },
+    {
+      type: 'speed_sign',
+      assetId: 'sign_speed_80',
+      intervalMeters: 350
+    },
+    {
+      type: 'reflector',
+      assetId: 'reflector_bollard',
+      intervalMeters: 25,
+      lateralOffset: 8.8
+    },
+    {
+      type: 'landmark',
+      assetId: 'landmark_coastal_lighthouse',
+      specificDistances: [380]
+    }
+  ]
+};
+
 export const BIOME_REGISTRY: Record<BiomeType, BiomeDefinition> = {
   [BiomeType.ALPINE_FOREST]: ALPINE_FOREST_BIOME,
-  [BiomeType.COASTAL]: {
-    ...ALPINE_FOREST_BIOME,
-    id: BiomeType.COASTAL,
-    name: 'Coastal Highway'
-  },
-  [BiomeType.DESERT_CANYON]: {
-    ...ALPINE_FOREST_BIOME,
-    id: BiomeType.DESERT_CANYON,
-    name: 'Desert Canyon'
-  }
+  [BiomeType.COASTAL]: COASTAL_BIOME,
+  [BiomeType.DESERT_CANYON]: DESERT_CANYON_BIOME
 };

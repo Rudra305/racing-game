@@ -9,11 +9,16 @@ import { Track } from './Track';
 export const ALPINE_CIRCUIT_CONFIG: TrackDefinition = {
   id: 'alpine-circuit',
   name: 'Alpine Test Circuit',
-  description: 'Mountain pass with 42m elevation difference, steep uphill climb, crest, and a 12° banked hairpin.',
+  tagline: 'Mountain Pass & Banked Hairpin',
+  description: 'Dramatic mountain pass with 42m elevation difference, steep uphill climb, summit crest, and a 12° banked hairpin.',
   roadWidth: 13.0,
   laps: 3,
   seed: 12345,
   environmentPreset: 'alpine',
+  difficulty: 'Technical',
+  lengthMeters: 1480,
+  elevationRelief: 42,
+  recommendedVehicles: ['sports', 'rally', 'supercar'],
   spline: {
     points: [
       { position: [0, 0, 0], width: 14.0, banking: 0 },             // Start/Finish straight
@@ -61,17 +66,84 @@ export const ALPINE_CIRCUIT_CONFIG: TrackDefinition = {
 };
 
 /**
- * 2. Coastal Cruiser (High speed, wide road, gentle banking)
+ * 2. Canyon Diablo Speedway (Desert Canyon Circuit)
+ * Fast, sunbaked canyon circuit featuring a 280m high-speed canyon wash straight,
+ * sweeping banked red sandstone sweepers, arroyo elevation dips, and mesa plateaus.
+ */
+export const CANYON_DIABLO_CONFIG: TrackDefinition = {
+  id: 'desert-canyon',
+  name: 'Canyon Diablo Speedway',
+  tagline: 'High-Speed Desert Wash & Sandstone Mesas',
+  description: 'Blistering desert circuit through red sandstone gorges, featuring a 280m high-speed straight and banked canyon sweepers.',
+  roadWidth: 15.0,
+  laps: 3,
+  seed: 98765,
+  environmentPreset: 'desert',
+  difficulty: 'High-Speed',
+  lengthMeters: 1720,
+  elevationRelief: 28,
+  recommendedVehicles: ['supercar', 'formula', 'suv', 'sports'],
+  spline: {
+    points: [
+      { position: [0, 0, 0], width: 15.0, banking: 0 },              // Start/Finish straight (Canyon basin)
+      { position: [160, 1, 0], width: 15.0, banking: 0 },            // Fast straightaway
+      { position: [270, 5, -50], width: 15.0, banking: 0.045 },      // Banked turn 1 canyon entry
+      { position: [340, 12, -150], width: 15.0, banking: 0.06 },     // Sweeping red sandstone wall
+      { position: [310, 18, -270], width: 15.0, banking: 0.04 },     // Mesa plateau climb
+      { position: [200, 24, -340], width: 14.5, banking: 0.02 },     // Upper mesa ridge
+      { position: [80, 20, -320], width: 14.5, banking: -0.03 },     // Arroyo plunge
+      { position: [-60, 14, -360], width: 15.0, banking: 0.05 },     // Sweeping gorge curve
+      { position: [-190, 8, -300], width: 15.0, banking: 0.065 },    // Red rock canyon hairpin
+      { position: [-250, 4, -180], width: 15.0, banking: 0.04 },     // Hairpin exit into lower wash
+      { position: [-220, 2, -60], width: 15.0, banking: 0.02 },      // High-speed arroyo straight
+      { position: [-140, 1, 60], width: 15.0, banking: 0.035 },      // Fast sweeper
+      { position: [-40, 0, 50], width: 15.0, banking: 0 }            // Return onto main straight
+    ],
+    closed: true,
+    tension: 0.5,
+    defaultWidth: 15.0,
+    defaultBanking: 0,
+    segments: 350
+  },
+  terrain: {
+    size: 1000,
+    resolution: 130,
+    seed: 98765,
+    baseHeight: -2.0,
+    heightScale: 38.0,
+    corridorWidth: 38.0,
+    corridorBlend: 24.0
+  },
+  boundaries: [
+    { type: 'ROAD', lateralDistance: 7.5, hasPhysicalBarrier: true, barrierHeight: 1.2, barrierWidth: 0.8 },
+    { type: 'PLAYABLE', lateralDistance: 28.0 },
+    { type: 'RESET', lateralDistance: 65.0 }
+  ],
+  startGrid: {
+    positions: 8,
+    rowSpacing: 11.5,
+    lateralSpacing: 3.8,
+    offsetFromStart: 8.0
+  }
+};
+
+/**
+ * 3. Coastal Cruiser (High speed, wide road, gentle banking)
  * Sweeping ocean highway with long straights and smooth transitions.
  */
 export const COASTAL_SPEEDWAY_CONFIG: TrackDefinition = {
   id: 'coastal-speedway',
   name: 'Coastal Speedway',
+  tagline: 'Scenic Ocean Highway & Coastal Bluffs',
   description: 'Fast and scenic coastal track with sweeping high-speed corners, ocean vistas, and wide overtaking zones.',
   roadWidth: 16.0,
   laps: 3,
   seed: 67890,
   environmentPreset: 'coastal',
+  difficulty: 'Balanced Flow',
+  lengthMeters: 1620,
+  elevationRelief: 18,
+  recommendedVehicles: ['sports', 'supercar', 'formula'],
   spline: {
     points: [
       { position: [0, 0, 0], width: 16.0, banking: 0 },
@@ -121,11 +193,16 @@ export const COASTAL_SPEEDWAY_CONFIG: TrackDefinition = {
 export const GP_TECHNICAL_CONFIG: TrackDefinition = {
   id: 'gp-technical',
   name: 'Grand Prix Technical',
+  tagline: 'Precision Chicanes & Grand Prix Parklands',
   description: 'Challenging technical circuit featuring tight chicanes, decreasing-radius turns, and elevation dips.',
   roadWidth: 12.5,
   laps: 3,
   seed: 54321,
   environmentPreset: 'alpine',
+  difficulty: 'Expert',
+  lengthMeters: 1420,
+  elevationRelief: 22,
+  recommendedVehicles: ['formula', 'supercar', 'sports'],
   spline: {
     points: [
       { position: [0, 0, 0], width: 14.0, banking: 0 },
@@ -173,6 +250,8 @@ export const GP_TECHNICAL_CONFIG: TrackDefinition = {
 
 export const TRACK_REGISTRY: Record<string, TrackDefinition> = {
   'alpine-circuit': ALPINE_CIRCUIT_CONFIG,
+  'desert-canyon': CANYON_DIABLO_CONFIG,
+  'canyon-diablo': CANYON_DIABLO_CONFIG,
   'coastal-speedway': COASTAL_SPEEDWAY_CONFIG,
   'gp-technical': GP_TECHNICAL_CONFIG,
   'grand-prix': GP_TECHNICAL_CONFIG
@@ -212,11 +291,12 @@ export class TrackManager {
     return this.currentTrackId;
   }
 
-  public static getAvailableTracks(): { id: string; name: string; description: string }[] {
-    return Object.values(TRACK_REGISTRY).map(t => ({
-      id: t.id,
-      name: t.name,
-      description: t.description
-    }));
+  public static getAvailableTracks(): TrackDefinition[] {
+    return [
+      ALPINE_CIRCUIT_CONFIG,
+      CANYON_DIABLO_CONFIG,
+      COASTAL_SPEEDWAY_CONFIG,
+      GP_TECHNICAL_CONFIG
+    ];
   }
 }

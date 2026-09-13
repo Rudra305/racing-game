@@ -8,6 +8,7 @@ import { VehiclePreview } from './VehiclePreview';
 
 export interface GarageManagerCallbacks {
   onStartRace: (def: VehicleDefinition, customization: VehicleCustomization) => void;
+  onSelectTrack?: () => void;
   onClose: () => void;
 }
 
@@ -50,6 +51,11 @@ export class GarageManager {
       onCustomizationChange: (cust) => this.updateCustomization(cust),
       onCustomizationReset: () => this.resetCustomization(),
       onAutoRotateToggle: () => this.toggleAutoRotate(),
+      onSelectTrack: () => {
+        if (this.callbacks.onSelectTrack) {
+          this.callbacks.onSelectTrack();
+        }
+      },
       onStartRace: () => this.startRace(),
       onClose: () => this.close()
     });
@@ -208,6 +214,14 @@ export class GarageManager {
     if (e.key === 'Enter') {
       e.preventDefault();
       this.startRace();
+      return;
+    }
+
+    if (e.key === 't' || e.key === 'T') {
+      e.preventDefault();
+      if (this.callbacks.onSelectTrack) {
+        this.callbacks.onSelectTrack();
+      }
       return;
     }
 

@@ -37,9 +37,9 @@ export class EnvironmentManager {
   ) {
     this.biome = BIOME_REGISTRY[biomeType] || BIOME_REGISTRY[BiomeType.ALPINE_FOREST];
 
-    // 1. Panoramic Distant Mountain Horizon Scenery
-    this.distantScenery = new DistantScenery(950, 24);
-    this.group.add(this.distantScenery.mesh);
+    // 1. Panoramic Distant Horizon Scenery (Mesas / Mountains / Headlands)
+    this.distantScenery = new DistantScenery(950, 24, this.biome.id);
+    this.group.add(this.distantScenery.group);
 
     // 2. Roadside Props (Guardrails, Signs, Reflectors, Landmarks)
     this.propSystem = new PropSystem(sampler, terrain, this.biome);

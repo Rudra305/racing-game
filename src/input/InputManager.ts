@@ -11,6 +11,7 @@ export interface InputActions {
   toggleTrackDebugRequested: boolean;
   toggleSettingsRequested: boolean;
   toggleGarageRequested: boolean;
+  toggleTrackSelectRequested: boolean;
   toggleAudioRequested: boolean;
   jumpRequested: boolean;
 }
@@ -30,6 +31,7 @@ export class InputManager {
     toggleTrackDebugRequested: false,
     toggleSettingsRequested: false,
     toggleGarageRequested: false,
+    toggleTrackSelectRequested: false,
     toggleAudioRequested: false,
     jumpRequested: false
   };
@@ -101,6 +103,11 @@ export class InputManager {
     if (code === 'KeyG' || key === 'g') {
       event.preventDefault();
       this.actions.toggleGarageRequested = true;
+    }
+    // Track selection directory toggle: T
+    if (code === 'KeyT' || key === 't') {
+      event.preventDefault();
+      this.actions.toggleTrackSelectRequested = true;
     }
     // Audio Mute toggle: M
     if (code === 'KeyM' || key === 'm') {
@@ -203,6 +210,12 @@ export class InputManager {
   public consumeToggleGarage(): boolean {
     const res = this.actions.toggleGarageRequested;
     this.actions.toggleGarageRequested = false;
+    return res;
+  }
+
+  public consumeToggleTrackSelect(): boolean {
+    const res = this.actions.toggleTrackSelectRequested;
+    this.actions.toggleTrackSelectRequested = false;
     return res;
   }
 

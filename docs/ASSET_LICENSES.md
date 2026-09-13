@@ -39,6 +39,39 @@ This document records the provenance, licensing, author attribution, and usage r
 - **Attribution Required**: No
 - **Notes**: Multi-scale rock formations with natural lichen/moss vertex color blending and horizon-encircling low-poly mountain silhouettes.
 
+### Desert & Canyon Vegetation & Flora (Phase 9)
+- **Asset ID**: `saguaro_cactus_lod0`, `saguaro_cactus_lod1`, `saguaro_cactus_lod2`, `desert_scrub`
+- **Source**: Procedural parametric 3D geometry engine with discrete 3-tier LOD.
+- **Author**: Apex Racer Project Team
+- **License**: MIT License
+- **URL**: [https://github.com/Rudra305/racing-game](https://github.com/Rudra305/racing-game)
+- **Commercial Use**: Allowed
+- **Modification Allowed**: Allowed
+- **Attribution Required**: No
+- **Notes**: High-performance instanced columnar saguaro cacti with dual upward arms, dome tops, and arid scrub/tumbleweed clumps.
+
+### Coastal Flora & Marine Environment (Phase 9)
+- **Asset ID**: `coastal_palm_lod0`, `coastal_palm_lod1`, `coastal_palm_lod2`, `coastal_scrub`, `coastal_rock`
+- **Source**: Procedural parametric 3D geometry engine with discrete 3-tier LOD.
+- **Author**: Apex Racer Project Team
+- **License**: MIT License
+- **URL**: [https://github.com/Rudra305/racing-game](https://github.com/Rudra305/racing-game)
+- **Commercial Use**: Allowed
+- **Modification Allowed**: Allowed
+- **Attribution Required**: No
+- **Notes**: Leaning curved multi-segment palm trunks with radiating canopy fronds and coastal dune grass clumps.
+
+### Biome Landmarks & Geological Features (Phase 9)
+- **Asset ID**: `desert_sandstone_rock_a`, `desert_sandstone_rock_b`, `landmark_sandstone_arch`, `landmark_coastal_lighthouse`
+- **Source**: Procedural parametric geometry engine.
+- **Author**: Apex Racer Project Team
+- **License**: MIT License
+- **URL**: [https://github.com/Rudra305/racing-game](https://github.com/Rudra305/racing-game)
+- **Commercial Use**: Allowed
+- **Modification Allowed**: Allowed
+- **Attribution Required**: No
+- **Notes**: Layered sandstone boulders, monolithic canyon arch, and nautical white/red signal lighthouse tower.
+
 ### Visual Road & Terrain Textures
 - **Asset ID**: `tex_asphalt_diffuse`, `tex_asphalt_roughness`, `tex_road_markings`, `tex_terrain_palette`
 - **Source**: Procedural high-resolution canvas texture synthesizer.

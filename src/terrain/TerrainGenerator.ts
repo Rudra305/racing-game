@@ -92,16 +92,29 @@ export interface GeneratedTerrainData {
 }
 
 export class TerrainGenerator {
-  public static generate(def: TerrainDefinition, sampler: TrackSampler): GeneratedTerrainData {
+  public static generate(
+    def: TerrainDefinition,
+    sampler: TrackSampler,
+    environmentPreset: 'alpine' | 'coastal' | 'desert' | 'grand-prix' = 'alpine'
+  ): GeneratedTerrainData {
     const noiseGen = new SeededNoise2D(def.seed);
     const res = def.resolution;
     const size = def.size;
     const halfSize = size * 0.5;
     const step = size / res;
 
+    // Biome-specific surface classification
+    const shoulderSurface = (environmentPreset === 'desert' || environmentPreset === 'coastal')
+      ? SurfaceType.SAND
+      : (environmentPreset === 'grand-prix' ? SurfaceType.GRAVEL : SurfaceType.DIRT);
+
+    const outerSurface = environmentPreset === 'desert'
+      ? SurfaceType.SAND
+      : SurfaceType.GRASS;
+
     // Precompute height query function for runtime physics and terrain grid
     const getRawHeight = (x: number, z: number): number => {
-      // Scale coordinates for smooth mountain rolling hills
+      // Scale coordinates for smooth natural rolling terrain
       const nx = (x + halfSize) * 0.0035;
       const nz = (z + halfSize) * 0.0035;
       const raw = noiseGen.fbm(nx, nz, 3);
@@ -142,17 +155,17 @@ export class TerrainGenerator {
         const u = distToEdge / def.corridorWidth;
         const w = u * u * (3 - 2 * u);
         finalY = THREE.MathUtils.lerp(roadY - 0.05, naturalY, w);
-        surf = SurfaceType.DIRT;
+        surf = shoulderSurface;
       } else if (distToEdge <= def.corridorWidth) {
-        // Outer corridor blending into mountains
+        // Outer corridor blending into landscape
         const u = distToEdge / def.corridorWidth;
         const w = u * u * (3 - 2 * u);
         finalY = THREE.MathUtils.lerp(roadY - 0.05, naturalY, w);
-        surf = SurfaceType.GRASS;
+        surf = outerSurface;
       } else {
         // Natural landscape
         finalY = naturalY;
-        surf = SurfaceType.GRASS;
+        surf = outerSurface;
       }
 
       return { height: finalY, distToEdge, surface: surf };
@@ -164,13 +177,40 @@ export class TerrainGenerator {
     const colors = new Float32Array(vertCount * 3);
     const indices: number[] = [];
 
-    // Pre-allocated color scratch
+    // Pre-allocated color palettes tailored to biome
     const colAsphalt = new THREE.Color(0x1a1e24);
-    const colShoulder = new THREE.Color(0x524332); // Gravel shoulder
-    const colGrassLow = new THREE.Color(0x385c28); // Lowland alpine meadow
-    const colGrassHigh = new THREE.Color(0x4a7336); // Sunlit hillside grass
-    const colRock = new THREE.Color(0x5c626d); // Exposed granite rock
-    const colSnow = new THREE.Color(0xdce5ed); // Mountain summit snow/frost
+    let colShoulder: THREE.Color;
+    let colLow: THREE.Color;
+    let colHigh: THREE.Color;
+    let colRock: THREE.Color;
+    let colSummit: THREE.Color;
+
+    if (environmentPreset === 'desert') {
+      colShoulder = new THREE.Color(0x9e683f); // Warm desert gravel/sand
+      colLow = new THREE.Color(0xb36336);      // Terracotta wash basin
+      colHigh = new THREE.Color(0xc97e44);     // Sunbaked ochre canyon slope
+      colRock = new THREE.Color(0x8a3c1e);     // Deep red sandstone gorge wall
+      colSummit = new THREE.Color(0xd29d72);   // Sunlit mesa cap rock
+    } else if (environmentPreset === 'coastal') {
+      colShoulder = new THREE.Color(0xc8ab80); // Dune sand shoulder
+      colLow = new THREE.Color(0x2e5436);      // Lush coastal grass
+      colHigh = new THREE.Color(0x4a6742);     // Seaside maritime scrub
+      colRock = new THREE.Color(0x5e636b);     // Weathered coastal bluffs
+      colSummit = new THREE.Color(0x7e838c);   // High ocean ridge rock
+    } else if (environmentPreset === 'grand-prix') {
+      colShoulder = new THREE.Color(0x52483d); // Standard gravel trap
+      colLow = new THREE.Color(0x285922);      // Manicured circuit turf
+      colHigh = new THREE.Color(0x356f2d);     // Park hillside
+      colRock = new THREE.Color(0x525a64);     // Retaining embankment
+      colSummit = new THREE.Color(0x6e7884);   // Distant ridge
+    } else {
+      // Alpine
+      colShoulder = new THREE.Color(0x524332); // Mountain gravel shoulder
+      colLow = new THREE.Color(0x385c28);      // Alpine valley meadow
+      colHigh = new THREE.Color(0x4a7336);     // Hillside pine grass
+      colRock = new THREE.Color(0x5c626d);     // Exposed granite rock
+      colSummit = new THREE.Color(0xdce5ed);   // Summit snow / frost
+    }
 
     let pIdx = 0;
     let cIdx = 0;
@@ -193,24 +233,20 @@ export class TerrainGenerator {
 
         if (info.surface === SurfaceType.ASPHALT) {
           vertColor.copy(colAsphalt);
-        } else if (info.surface === SurfaceType.DIRT || info.surface === SurfaceType.KERB) {
+        } else if (info.surface === SurfaceType.DIRT || info.surface === SurfaceType.KERB || info.surface === SurfaceType.GRAVEL || info.surface === SurfaceType.SAND) {
           vertColor.copy(colShoulder);
         } else {
-          // Height ratio across mountain elevation profile
+          // Height ratio across elevation profile
           const heightRatio = Math.max(0, Math.min(1, (info.height - def.baseHeight) / def.heightScale));
           if (heightRatio > 0.88) {
-            // Summit snow / granite frost
-            vertColor.copy(colSnow);
+            vertColor.copy(colSummit);
           } else if (heightRatio > 0.65) {
-            // High altitude granite rock face
             vertColor.copy(colRock);
           } else if (heightRatio > 0.35) {
-            // Hillside grass with rock transition
             const t = (heightRatio - 0.35) / 0.30;
-            vertColor.copy(colGrassHigh).lerp(colRock, t);
+            vertColor.copy(colHigh).lerp(colRock, t);
           } else {
-            // Lush alpine meadow valley
-            vertColor.copy(colGrassLow).lerp(colGrassHigh, heightRatio / 0.35);
+            vertColor.copy(colLow).lerp(colHigh, heightRatio / 0.35);
           }
         }
 

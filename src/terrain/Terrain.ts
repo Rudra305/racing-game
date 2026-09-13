@@ -9,9 +9,13 @@ export class Terrain {
   public readonly mesh: THREE.Mesh;
   private readonly data: GeneratedTerrainData;
 
-  constructor(definition: TerrainDefinition, sampler: TrackSampler) {
+  constructor(
+    definition: TerrainDefinition,
+    sampler: TrackSampler,
+    environmentPreset: 'alpine' | 'coastal' | 'desert' | 'grand-prix' = 'alpine'
+  ) {
     this.definition = definition;
-    this.data = TerrainGenerator.generate(definition, sampler);
+    this.data = TerrainGenerator.generate(definition, sampler, environmentPreset);
     this.mesh = this.data.mesh;
   }
 

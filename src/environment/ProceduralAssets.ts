@@ -77,6 +77,64 @@ export class ProceduralAssets {
     metalness: 0.06
   });
 
+  public static cactusMaterial = new THREE.MeshStandardMaterial({
+    color: 0x486b3e, // Saguaro desert olive green
+    roughness: 0.88,
+    metalness: 0.02
+  });
+
+  public static palmTrunkMaterial = new THREE.MeshStandardMaterial({
+    color: 0x6e523f, // Coastal palm fiber trunk
+    roughness: 0.9,
+    metalness: 0.04
+  });
+
+  public static palmFrondMaterial = new THREE.MeshStandardMaterial({
+    color: 0x2e6f3b, // Vivid tropical palm frond
+    roughness: 0.82,
+    metalness: 0.02,
+    side: THREE.DoubleSide
+  });
+
+  public static desertScrubMaterial = new THREE.MeshStandardMaterial({
+    color: 0x9b8858, // Arid tumbleweed/scrub
+    roughness: 0.92,
+    metalness: 0.01
+  });
+
+  public static coastalScrubMaterial = new THREE.MeshStandardMaterial({
+    color: 0x5a7848, // Seaside bluff dune grass
+    roughness: 0.88,
+    metalness: 0.01,
+    side: THREE.DoubleSide
+  });
+
+  public static sandstoneMaterial = new THREE.MeshStandardMaterial({
+    color: 0x9e4428, // Red canyon sandstone
+    roughness: 0.94,
+    metalness: 0.06,
+    flatShading: true
+  });
+
+  public static coastalRockMaterial = new THREE.MeshStandardMaterial({
+    color: 0x585d66, // Weathered ocean bluff rock
+    roughness: 0.92,
+    metalness: 0.08,
+    flatShading: true
+  });
+
+  public static lighthouseMaterial = new THREE.MeshStandardMaterial({
+    color: 0xeeeeee, // Crisp marine white
+    roughness: 0.45,
+    metalness: 0.15
+  });
+
+  public static lighthouseRedMaterial = new THREE.MeshStandardMaterial({
+    color: 0xc92a2a, // Nautical signal red
+    roughness: 0.45,
+    metalness: 0.15
+  });
+
   /**
    * 1. Alpine Fir Tree (LOD 0, 1, 2)
    */
@@ -510,6 +568,252 @@ export class ProceduralAssets {
     group.add(boardMesh);
 
     return group;
+  }
+
+  /**
+   * 16. Desert Saguaro Cactus (LOD 0, 1, 2)
+   */
+  public static createSaguaroCactusGeometry(lod: 0 | 1 | 2): THREE.BufferGeometry {
+    if (lod === 2) {
+      const w = 2.4;
+      const h = 5.5;
+      const geo1 = new THREE.PlaneGeometry(w, h);
+      geo1.translate(0, h * 0.5, 0);
+      const geo2 = new THREE.PlaneGeometry(w, h);
+      geo2.rotateY(Math.PI / 2);
+      geo2.translate(0, h * 0.5, 0);
+      return this.mergeGeometries([geo1, geo2]);
+    }
+
+    if (lod === 1) {
+      const parts: THREE.BufferGeometry[] = [];
+      const trunk = new THREE.CylinderGeometry(0.32, 0.38, 5.0, 6);
+      trunk.translate(0, 2.5, 0);
+      parts.push(trunk);
+
+      const armConn = new THREE.CylinderGeometry(0.2, 0.2, 0.8, 5);
+      armConn.rotateZ(Math.PI / 2);
+      armConn.translate(-0.55, 3.0, 0);
+      parts.push(armConn);
+
+      const armUp = new THREE.CylinderGeometry(0.2, 0.2, 1.4, 5);
+      armUp.translate(-0.95, 3.7, 0);
+      parts.push(armUp);
+
+      return this.mergeGeometries(parts);
+    }
+
+    // LOD 0: Multi-branching saguaro with rounded ribs
+    const parts: THREE.BufferGeometry[] = [];
+    const trunk = new THREE.CylinderGeometry(0.34, 0.38, 5.2, 8);
+    trunk.translate(0, 2.6, 0);
+    parts.push(trunk);
+
+    const dome = new THREE.SphereGeometry(0.34, 8, 6, 0, Math.PI * 2, 0, Math.PI * 0.5);
+    dome.translate(0, 5.2, 0);
+    parts.push(dome);
+
+    // Left arm
+    const lConn = new THREE.CylinderGeometry(0.22, 0.22, 0.9, 7);
+    lConn.rotateZ(Math.PI / 2);
+    lConn.translate(-0.65, 3.2, 0);
+    parts.push(lConn);
+
+    const lUp = new THREE.CylinderGeometry(0.22, 0.22, 1.8, 7);
+    lUp.translate(-1.1, 4.1, 0);
+    parts.push(lUp);
+
+    const lDome = new THREE.SphereGeometry(0.22, 7, 5, 0, Math.PI * 2, 0, Math.PI * 0.5);
+    lDome.translate(-1.1, 5.0, 0);
+    parts.push(lDome);
+
+    // Right arm
+    const rConn = new THREE.CylinderGeometry(0.2, 0.2, 0.8, 7);
+    rConn.rotateZ(Math.PI / 2);
+    rConn.translate(0.6, 2.4, 0);
+    parts.push(rConn);
+
+    const rUp = new THREE.CylinderGeometry(0.2, 0.2, 1.4, 7);
+    rUp.translate(1.0, 3.1, 0);
+    parts.push(rUp);
+
+    const rDome = new THREE.SphereGeometry(0.2, 7, 5, 0, Math.PI * 2, 0, Math.PI * 0.5);
+    rDome.translate(1.0, 3.8, 0);
+    parts.push(rDome);
+
+    return this.mergeGeometries(parts);
+  }
+
+  /**
+   * 17. Desert Arid Scrub Bush / Tumbleweed
+   */
+  public static createDesertScrubGeometry(): THREE.BufferGeometry {
+    const parts: THREE.BufferGeometry[] = [];
+    const p1 = new THREE.PlaneGeometry(1.4, 1.0);
+    p1.translate(0, 0.5, 0);
+    parts.push(p1);
+
+    const p2 = new THREE.PlaneGeometry(1.3, 0.9);
+    p2.rotateY(Math.PI / 3);
+    p2.translate(0, 0.45, 0);
+    parts.push(p2);
+
+    const p3 = new THREE.PlaneGeometry(1.2, 0.85);
+    p3.rotateY((Math.PI * 2) / 3);
+    p3.translate(0, 0.42, 0);
+    parts.push(p3);
+
+    return this.mergeGeometries(parts);
+  }
+
+  /**
+   * 18. Coastal Palm Tree (LOD 0, 1, 2)
+   */
+  public static createPalmTreeGeometry(lod: 0 | 1 | 2): THREE.BufferGeometry {
+    if (lod === 2) {
+      const w = 4.5;
+      const h = 7.5;
+      const geo1 = new THREE.PlaneGeometry(w, h);
+      geo1.translate(0, h * 0.5, 0);
+      const geo2 = new THREE.PlaneGeometry(w, h);
+      geo2.rotateY(Math.PI / 2);
+      geo2.translate(0, h * 0.5, 0);
+      return this.mergeGeometries([geo1, geo2]);
+    }
+
+    if (lod === 1) {
+      const parts: THREE.BufferGeometry[] = [];
+      const trunk = new THREE.CylinderGeometry(0.2, 0.35, 6.5, 5);
+      trunk.translate(0, 3.25, 0);
+      parts.push(trunk);
+
+      for (let i = 0; i < 4; i++) {
+        const frond = new THREE.PlaneGeometry(1.2, 3.2);
+        frond.rotateX(-0.6);
+        frond.rotateY(i * (Math.PI / 2));
+        frond.translate(0, 6.2, 0);
+        parts.push(frond);
+      }
+      return this.mergeGeometries(parts);
+    }
+
+    // LOD 0: Multi-segment leaning palm with radiating canopy fronds
+    const parts: THREE.BufferGeometry[] = [];
+    const t1 = new THREE.CylinderGeometry(0.3, 0.38, 2.5, 7);
+    t1.translate(0, 1.25, 0);
+    parts.push(t1);
+
+    const t2 = new THREE.CylinderGeometry(0.25, 0.3, 2.5, 7);
+    t2.rotateZ(-0.06);
+    t2.translate(0.1, 3.6, 0);
+    parts.push(t2);
+
+    const t3 = new THREE.CylinderGeometry(0.2, 0.25, 2.5, 7);
+    t3.rotateZ(-0.14);
+    t3.translate(0.35, 5.8, 0);
+    parts.push(t3);
+
+    for (let i = 0; i < 8; i++) {
+      const angle = i * (Math.PI / 4);
+      const frond = new THREE.BoxGeometry(0.45, 0.03, 2.6);
+      frond.rotateX(-0.55);
+      frond.rotateY(angle);
+      frond.translate(0.5, 6.8, 0);
+      parts.push(frond);
+    }
+
+    return this.mergeGeometries(parts);
+  }
+
+  /**
+   * 19. Coastal Dune Grass / Scrub
+   */
+  public static createCoastalScrubGeometry(): THREE.BufferGeometry {
+    const parts: THREE.BufferGeometry[] = [];
+    const p1 = new THREE.PlaneGeometry(1.2, 1.2);
+    p1.translate(0, 0.6, 0);
+    parts.push(p1);
+
+    const p2 = new THREE.PlaneGeometry(1.1, 1.1);
+    p2.rotateY(Math.PI * 0.4);
+    p2.translate(0, 0.55, 0);
+    parts.push(p2);
+
+    return this.mergeGeometries(parts);
+  }
+
+  /**
+   * 20. Sandstone Rock Formation (Variant 0, 1)
+   */
+  public static createSandstoneBoulderGeometry(variant: 0 | 1): THREE.BufferGeometry {
+    const geo = new THREE.DodecahedronGeometry(variant === 0 ? 1.6 : 2.4, 0);
+    if (variant === 0) {
+      geo.scale(1.5, 0.7, 1.2);
+    } else {
+      geo.scale(1.2, 0.6, 1.7);
+    }
+    geo.computeVertexNormals();
+    return geo;
+  }
+
+  /**
+   * 21. Coastal Sea Bluff Rock (Variant 0, 1)
+   */
+  public static createCoastalRockGeometry(variant: 0 | 1): THREE.BufferGeometry {
+    const geo = new THREE.DodecahedronGeometry(variant === 0 ? 1.8 : 2.8, 0);
+    geo.scale(1.0, 1.4, 1.2);
+    geo.computeVertexNormals();
+    return geo;
+  }
+
+  /**
+   * 22. Coastal Lighthouse Landmark
+   */
+  public static createLighthouseGeometry(): THREE.BufferGeometry {
+    const parts: THREE.BufferGeometry[] = [];
+
+    const base = new THREE.CylinderGeometry(3.6, 3.8, 1.6, 12);
+    base.translate(0, 0.8, 0);
+    parts.push(base);
+
+    const tower = new THREE.CylinderGeometry(1.6, 2.8, 16.0, 12);
+    tower.translate(0, 9.6, 0);
+    parts.push(tower);
+
+    const balcony = new THREE.CylinderGeometry(2.3, 2.1, 0.4, 12);
+    balcony.translate(0, 17.8, 0);
+    parts.push(balcony);
+
+    const lantern = new THREE.CylinderGeometry(1.5, 1.5, 2.2, 10);
+    lantern.translate(0, 19.0, 0);
+    parts.push(lantern);
+
+    const dome = new THREE.SphereGeometry(1.5, 10, 8, 0, Math.PI * 2, 0, Math.PI * 0.5);
+    dome.translate(0, 20.1, 0);
+    parts.push(dome);
+
+    return this.mergeGeometries(parts);
+  }
+
+  /**
+   * 23. Desert Sandstone Arch Landmark
+   */
+  public static createSandstoneArchGeometry(): THREE.BufferGeometry {
+    const parts: THREE.BufferGeometry[] = [];
+
+    const p1 = new THREE.CylinderGeometry(1.8, 2.5, 13.0, 8);
+    p1.translate(-6.5, 6.5, 0);
+    parts.push(p1);
+
+    const p2 = new THREE.CylinderGeometry(1.8, 2.5, 13.0, 8);
+    p2.translate(6.5, 6.5, 0);
+    parts.push(p2);
+
+    const arch = new THREE.BoxGeometry(15.0, 2.2, 3.2);
+    arch.translate(0, 13.5, 0);
+    parts.push(arch);
+
+    return this.mergeGeometries(parts);
   }
 
   /**

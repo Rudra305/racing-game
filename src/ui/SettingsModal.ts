@@ -5,6 +5,7 @@ import { AIDifficultyLevel } from '../game/race/RaceConfig';
 export interface SettingsModalCallbacks {
   onVehiclePresetChanged: (config: VehicleConfig) => void;
   onTrackChanged: (trackId: string) => void;
+  onOpenTrackModal?: () => void;
   onQualityChanged?: (scale: number) => void;
   onAIDifficultyChanged?: (difficulty: AIDifficultyLevel) => void;
   onAICountChanged?: (count: number) => void;
@@ -81,11 +82,17 @@ export class SettingsModal {
 
         <!-- Circuit Track Selection -->
         <div style="margin-bottom: 20px;">
-          <label style="display: block; font-size: 11px; font-weight: 700; color: #8b949e; text-transform: uppercase; margin-bottom: 8px; letter-spacing: 0.08em;">Race Circuit (Track & Terrain)</label>
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+            <label style="font-size: 11px; font-weight: 700; color: #8b949e; text-transform: uppercase; letter-spacing: 0.08em;">Race Circuit (Track & Terrain)</label>
+            <button id="btn-browse-circuits" style="background: rgba(88, 166, 255, 0.15); border: 1px solid rgba(88, 166, 255, 0.4); color: #58a6ff; font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 4px; cursor: pointer; text-transform: uppercase;">
+              Browse Directory ➔
+            </button>
+          </div>
           <select id="setting-track-preset" style="width: 100%; background: #161d27; border: 1px solid rgba(88, 166, 255, 0.4); color: #58a6ff; padding: 8px 12px; border-radius: 6px; font-size: 13px; font-family: monospace; cursor: pointer; font-weight: 700;">
             <option value="alpine-circuit">Alpine Test Circuit (42m Elevation, Banked Hairpin)</option>
+            <option value="desert-canyon">Canyon Diablo Speedway (Sandstone Gorges, High-Speed Wash)</option>
             <option value="coastal-speedway">Coastal Speedway (High-Speed Sweepers, Ocean Plains)</option>
-            <option value="grand-prix">Grand Prix Technical (Technical Chicanes, Rolling Hills)</option>
+            <option value="gp-technical">Grand Prix Technical (Technical Chicanes, Precision Flow)</option>
           </select>
         </div>
 
@@ -254,6 +261,15 @@ export class SettingsModal {
       const trackId = this.trackPresetSelect.value;
       this.callbacks.onTrackChanged(trackId);
     });
+
+    const browseBtn = this.modalEl?.querySelector('#btn-browse-circuits');
+    if (browseBtn) {
+      browseBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        this.hide();
+        this.callbacks.onOpenTrackModal?.();
+      });
+    }
 
     this.graphicsQualitySelect.addEventListener('change', () => {
       const scale = parseFloat(this.graphicsQualitySelect.value);

@@ -43,11 +43,16 @@ export interface StartGridConfig {
 export interface TrackDefinition {
   id: string;
   name: string;
+  tagline?: string;
   description: string;
   roadWidth: number;
   laps: number;
   seed: number;
-  environmentPreset?: 'alpine' | 'coastal' | 'desert';
+  environmentPreset?: 'alpine' | 'coastal' | 'desert' | 'grand-prix';
+  difficulty?: 'Technical' | 'High-Speed' | 'Balanced Flow' | 'Expert';
+  lengthMeters?: number;
+  elevationRelief?: number;
+  recommendedVehicles?: string[];
   spline: TrackSplineDefinition;
   terrain: TerrainDefinition;
   boundaries: TrackBoundaryDefinition[];
